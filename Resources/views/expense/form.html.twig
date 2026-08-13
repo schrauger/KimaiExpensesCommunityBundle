@@ -1,0 +1,96 @@
+{% extends '@MileageExpense/expense/base.html.twig' %}
+
+{% block expense_content %}
+<div class="card">
+    <div class="card-body">
+        {{ form_start(form) }}
+        {{ form_errors(form) }}
+
+        <div class="row">
+            <div class="col-12">
+                {{ form_row(form.date) }}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                {{ form_row(form.category) }}
+            </div>
+            <div class="col-md-4">
+                {{ form_row(form.quantity) }}
+            </div>
+            <div class="col-md-4">
+                {{ form_row(form.cost) }}
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">{{ form_row(form.customer) }}</div>
+            <div class="col-md-4">{{ form_row(form.project) }}</div>
+        </div>
+
+        {{ form_row(form.activity) }}
+        {{ form_row(form.billable) }}
+        {{ form_row(form.description) }}
+
+        <div class="alert alert-info mt-3">
+            <strong>Calculated total:</strong>
+            <span id="expense-total">0.00</span>
+            <span id="expense-unit-label"></span>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Save expense</button>
+            <a class="btn btn-secondary" href="{{ path('mileage_expense') }}">Cancel</a>
+        </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+
+<script>
+(function () {
+    const category = document.getElementById('{{ form.category.vars.id }}');
+    const quantity = document.getElementById('{{ form.quantity.vars.id }}');
+    const cost = document.getElementById('{{ form.cost.vars.id }}');
+    const total = document.getElementById('expense-total');
+    const unitLabel = document.getElementById('expense-unit-label');
+    const canEditCost = {{ form.cost.vars.disabled ? 'false' : 'true' }};
+
+    function selectedCategory() {
+        return category ? category.options[category.selectedIndex] : null;
+    }
+
+    function updateRateFromCategory() {
+        if (!category || !cost || !canEditCost) {
+            return;
+        }
+
+        const option = selectedCategory();
+        const rate = option ? option.dataset.defaultCost : null;
+        if (rate !== null && rate !== undefined && rate !== '') {
+            cost.value = rate;
+        }
+    }
+
+    function updateTotal() {
+        const q = parseFloat(quantity?.value || '0');
+        const c = parseFloat(cost?.value || '0');
+        const result = Number.isFinite(q * c) ? q * c : 0;
+        total.textContent = result.toFixed(2);
+
+        const option = selectedCategory();
+        unitLabel.textContent = option ? ' ' + (option.textContent || '') : '';
+    }
+
+    category?.addEventListener('change', function () {
+        updateRateFromCategory();
+        updateTotal();
+    });
+    quantity?.addEventListener('input', updateTotal);
+    cost?.addEventListener('input', updateTotal);
+
+    updateTotal();
+})();
+</script>
+{% endblock %}

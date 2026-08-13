@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="messages" product-name="mileage-expense-bundle">
+        <body>
+            <trans-unit id="mileage_expense">
+                <source>mileage_expense</source>
+                <target>Expenses</target>
+            </trans-unit>
+            <trans-unit id="mileage_expense_category">
+                <source>mileage_expense_category</source>
+                <target>Expense categories</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

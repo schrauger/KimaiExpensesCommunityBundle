@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace KimaiPlugin\MileageExpenseBundle\Repository;
+
+use App\Entity\User;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
+use KimaiPlugin\MileageExpenseBundle\Entity\Expense;
+
+final class ExpenseRepository extends ServiceEntityRepository
+{
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, Expense::class);
+    }
+
+    /**
+     * @return Expense[]
+     */
+    public function findVisibleForUser(User $user, bool $canSeeOtherUsers): array
+    {
+        $qb = $this->createQueryBuilder('expense')
+            ->leftJoin('expense.category', 'category')->addSelect('category')
+            ->leftJoin('expense.customer', 'customer')->addSelect('customer')
+            ->leftJoin('expense.project', 'project')->addSelect('project')
+            ->leftJoin('expense.activity', 'activity')->addSelect('activity')
+            ->leftJoin('expense.user', 'owner')->addSelect('owner')
+            ->orderBy('expense.date', 'DESC')
+            ->addOrderBy('expense.id', 'DESC');
+
+        if (!$canSeeOtherUsers) {
+            $qb->andWhere('expense.user = :user')->setParameter('user', $user);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    public function countByCategory(\KimaiPlugin\MileageExpenseBundle\Entity\ExpenseCategory $category): int
+    {
+        return (int) $this->createQueryBuilder('expense')
+            ->select('COUNT(expense.id)')
+            ->andWhere('expense.category = :category')
+            ->setParameter('category', $category)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+}

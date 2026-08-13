@@ -1,0 +1,66 @@
+{% extends '@MileageExpense/expense/base.html.twig' %}
+
+{% block expense_content %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-vcenter table-hover card-table">
+            <thead>
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>User</th>
+                <th>Customer</th>
+                <th>Project</th>
+                <th>Quantity</th>
+                <th>Cost</th>
+                <th>Total</th>
+                <th>Billable</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.date|date('Y-m-d H:i', timezone) }}</td>
+                    <td>
+                        <strong>{{ expense.category.name }}</strong>
+                        {% if expense.description %}
+                            <div class="text-secondary small">{{ expense.description }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ expense.user.username }}</td>
+                    <td>{{ expense.customer ? expense.customer.name : '—' }}</td>
+                    <td>{{ expense.project ? expense.project.name : '—' }}</td>
+                    <td>{{ expense.quantity|number_format(4, '.', ',') }} {{ expense.category.unit }}</td>
+                    <td>{{ expense.cost|number_format(4, '.', ',') }}</td>
+                    <td><strong>{{ expense.total|number_format(2, '.', ',') }}</strong></td>
+                    <td>
+                        {% if expense.billable %}
+                            <span class="badge bg-green-lt">Yes</span>
+                        {% else %}
+                            <span class="badge bg-secondary-lt">No</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end text-nowrap">
+                        {% if is_granted('edit_mileage_expense') %}
+                            <a class="btn btn-sm btn-outline-primary" href="{{ path('mileage_expense_edit', {id: expense.id}) }}">Edit</a>
+                        {% endif %}
+                        {% if is_granted('delete_mileage_expense') %}
+                            <form method="post" action="{{ path('mileage_expense_delete', {id: expense.id}) }}" class="d-inline"
+                                  onsubmit="return confirm('Delete this expense?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete-expense-' ~ expense.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="10" class="text-center py-5 text-muted">No expenses found.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

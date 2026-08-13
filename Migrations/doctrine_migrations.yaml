@@ -1,0 +1,7 @@
+# Doctrine uses a separate migration history table for this plugin so its
+# migration history is independent from Kimai core.
+table_storage:
+    table_name: 'bundle_migration_mileage_expense'
+
+migrations_paths:
+    'KimaiPlugin\MileageExpenseBundle\Migrations': 'var/plugins/MileageExpenseBundle/Migrations'

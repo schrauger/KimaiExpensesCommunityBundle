@@ -1,0 +1,16 @@
+{
+  "name": "custom/mileage-expense-bundle",
+  "description": "Free self-hosted expense tracking plugin for Kimai",
+  "type": "kimai-plugin",
+  "version": "0.1.0",
+  "license": "MIT",
+  "require": {
+    "php": "^8.2"
+  },
+  "extra": {
+    "kimai": {
+      "require": 26500,
+      "name": "Mileage & Expense Tracking"
+    }
+  }
+}

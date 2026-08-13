@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+
+{% block page_title %}{{ title|default('Expenses') }}{% endblock %}
+
+{% block main %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>{{ title|default('Expenses') }}</h1>
+        <div class="btn-list">
+            {% if is_granted('create_mileage_expense') %}
+                <a class="btn btn-primary" href="{{ path('mileage_expense_create') }}">
+                    <i class="fas fa-plus"></i> New expense
+                </a>
+            {% endif %}
+            {% if is_granted('manage_mileage_expense_category') %}
+                <a class="btn btn-secondary" href="{{ path('mileage_expense_category') }}">
+                    Categories
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+
+    {% for message in app.flashes('danger') %}
+        <div class="alert alert-danger">{{ message }}</div>
+    {% endfor %}
+
+    {% block expense_content %}{% endblock %}
+</div>
+{% endblock %}
