@@ -1,4 +1,4 @@
-# KimaiExpensesCommunityBundle — Phase 1
+# KimaiExpensesCommunityBundle
 
 A small, free, self-hosted Kimai plugin for tracking expenses using the same basic model documented for Kimai's commercial Expenses functionality:
 
@@ -18,8 +18,6 @@ This is an independent implementation based on Kimai's public plugin APIs and do
 
 - Kimai: **2.65+**
 - PHP: **8.2+**
-
-The `composer.json` requires Kimai `2.65.0` or newer using Kimai's integer plugin version format (`26500`).
 
 ## Install
 
@@ -67,21 +65,3 @@ The permissions are initially assigned to `ROLE_SUPER_ADMIN`. Other roles can be
 
 As with Kimai's documented expense behavior, users without `view_other_timesheet` only see and modify their own expenses.
 
-## Phase 1 limitations
-
-This first version intentionally does **not** implement:
-
-- Kimai invoice integration
-- Kimai budget integration
-- advanced data-table filtering/search
-- CSV/XLSX/PDF exports
-- API endpoints
-- receipt attachments
-- dynamic Customer → Project → Activity filtering
-- automatic exported-state handling during invoice generation
-
-Those belong in the next phases once the basic workflow is confirmed on the target Kimai installation.
-
-## Development notes
-
-The plugin keeps its own Doctrine migration history in `bundle_migration_kimai_expenses_community`. Future schema changes should be added as new migration classes; do not edit the initial migration once it has been deployed.
