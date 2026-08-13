@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\Command;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\Command;
 
 use App\Command\AbstractBundleInstallerCommand;
 
 /**
- * Provides `bin/console kimai:bundle:mileage-expense:install` for installing
+ * Provides `bin/console kimai:bundle:kimai-expenses-community:install` for installing
  * and, later, upgrading this plugin's Doctrine migrations.
  */
 final class InstallCommand extends AbstractBundleInstallerCommand
 {
     protected function getBundleCommandNamePart(): string
     {
-        return 'mileage-expense';
+        return 'kimai-expenses-community';
     }
 
     protected function getMigrationConfigFilename(): ?string

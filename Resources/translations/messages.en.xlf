@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
-    <file source-language="en" datatype="plaintext" original="messages" product-name="mileage-expense-bundle">
+    <file source-language="en" datatype="plaintext" original="messages" product-name="kimai-expenses-community-bundle">
         <body>
-            <trans-unit id="mileage_expense">
-                <source>mileage_expense</source>
+            <trans-unit id="kimai_expenses_community">
+                <source>kimai_expenses_community</source>
                 <target>Expenses</target>
             </trans-unit>
-            <trans-unit id="mileage_expense_category">
-                <source>mileage_expense_category</source>
+            <trans-unit id="kimai_expenses_community_category">
+                <source>kimai_expenses_community_category</source>
                 <target>Expense categories</target>
             </trans-unit>
         </body>

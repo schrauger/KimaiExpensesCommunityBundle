@@ -1,4 +1,4 @@
-{% extends '@MileageExpense/expense/base.html.twig' %}
+{% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
 
 {% block expense_content %}
 <div class="card">
@@ -42,11 +42,11 @@
                         {% endif %}
                     </td>
                     <td class="text-end text-nowrap">
-                        {% if is_granted('edit_mileage_expense') %}
-                            <a class="btn btn-sm btn-outline-primary" href="{{ path('mileage_expense_edit', {id: expense.id}) }}">Edit</a>
+                        {% if is_granted('edit_kimai_expenses_community') %}
+                            <a class="btn btn-sm btn-outline-primary" href="{{ path('kimai_expenses_community_edit', {id: expense.id}) }}">Edit</a>
                         {% endif %}
-                        {% if is_granted('delete_mileage_expense') %}
-                            <form method="post" action="{{ path('mileage_expense_delete', {id: expense.id}) }}" class="d-inline"
+                        {% if is_granted('delete_kimai_expenses_community') %}
+                            <form method="post" action="{{ path('kimai_expenses_community_delete', {id: expense.id}) }}" class="d-inline"
                                   onsubmit="return confirm('Delete this expense?');">
                                 <input type="hidden" name="_token" value="{{ csrf_token('delete-expense-' ~ expense.id) }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>

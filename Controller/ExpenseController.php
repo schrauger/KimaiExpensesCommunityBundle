@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\Controller;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\Controller;
 
 use App\Controller\AbstractController;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use KimaiPlugin\MileageExpenseBundle\Entity\Expense;
-use KimaiPlugin\MileageExpenseBundle\Form\ExpenseType;
-use KimaiPlugin\MileageExpenseBundle\Repository\ExpenseRepository;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\Expense;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Form\ExpenseType;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -24,22 +24,22 @@ final class ExpenseController extends AbstractController
     ) {
     }
 
-    #[Route('', name: 'mileage_expense', methods: ['GET'])]
-    #[IsGranted('view_mileage_expense')]
+    #[Route('', name: 'kimai_expenses_community', methods: ['GET'])]
+    #[IsGranted('view_kimai_expenses_community')]
     public function index(): Response
     {
         $user = $this->getAuthenticatedUser();
         $canSeeOtherUsers = $this->isGranted('view_other_timesheet');
 
-        return $this->render('@MileageExpense/expense/index.html.twig', [
+        return $this->render('@KimaiExpensesCommunity/expense/index.html.twig', [
             'expenses' => $this->expenses->findVisibleForUser($user, $canSeeOtherUsers),
             'title' => 'Expenses',
             'timezone' => $user->getTimezone(),
         ]);
     }
 
-    #[Route('/create', name: 'mileage_expense_create', methods: ['GET', 'POST'])]
-    #[IsGranted('create_mileage_expense')]
+    #[Route('/create', name: 'kimai_expenses_community_create', methods: ['GET', 'POST'])]
+    #[IsGranted('create_kimai_expenses_community')]
     public function create(Request $request): Response
     {
         $user = $this->getAuthenticatedUser();
@@ -48,8 +48,8 @@ final class ExpenseController extends AbstractController
         $expense->setUser($user);
 
         $form = $this->createForm(ExpenseType::class, $expense, [
-            'action' => $this->generateUrl('mileage_expense_create'),
-            'can_edit_cost' => $this->isGranted('edit_mileage_expense_cost'),
+            'action' => $this->generateUrl('kimai_expenses_community_create'),
+            'can_edit_cost' => $this->isGranted('edit_kimai_expenses_community_cost'),
             'timezone' => $user->getTimezone(),
         ]);
         $form->handleRequest($request);
@@ -58,7 +58,7 @@ final class ExpenseController extends AbstractController
             // Normal users cannot edit rates. Always take the rate from the
             // selected category on the server so the browser cannot bypass
             // the permission by modifying the HTML form.
-            if (!$this->isGranted('edit_mileage_expense_cost')) {
+            if (!$this->isGranted('edit_kimai_expenses_community_cost')) {
                 $expense->setCost($expense->getCategory()->getDefaultCost());
             }
 
@@ -67,17 +67,17 @@ final class ExpenseController extends AbstractController
 
             $this->addFlash('success', 'Expense created.');
 
-            return $this->redirectToRoute('mileage_expense');
+            return $this->redirectToRoute('kimai_expenses_community');
         }
 
-        return $this->render('@MileageExpense/expense/form.html.twig', [
+        return $this->render('@KimaiExpensesCommunity/expense/form.html.twig', [
             'form' => $form->createView(),
             'title' => 'New expense',
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'mileage_expense_edit', methods: ['GET', 'POST'])]
-    #[IsGranted('edit_mileage_expense')]
+    #[Route('/{id}/edit', name: 'kimai_expenses_community_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('edit_kimai_expenses_community')]
     public function edit(int $id, Request $request): Response
     {
         $expense = $this->findExpense($id);
@@ -90,31 +90,31 @@ final class ExpenseController extends AbstractController
         $user = $this->getAuthenticatedUser();
 
         $form = $this->createForm(ExpenseType::class, $expense, [
-            'action' => $this->generateUrl('mileage_expense_edit', ['id' => $id]),
-            'can_edit_cost' => $this->isGranted('edit_mileage_expense_cost'),
+            'action' => $this->generateUrl('kimai_expenses_community_edit', ['id' => $id]),
+            'can_edit_cost' => $this->isGranted('edit_kimai_expenses_community_cost'),
             'timezone' => $user->getTimezone(),
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            if (!$this->isGranted('edit_mileage_expense_cost')) {
+            if (!$this->isGranted('edit_kimai_expenses_community_cost')) {
                 $expense->setCost($originalCost);
             }
 
             $this->entityManager->flush();
             $this->addFlash('success', 'Expense updated.');
 
-            return $this->redirectToRoute('mileage_expense');
+            return $this->redirectToRoute('kimai_expenses_community');
         }
 
-        return $this->render('@MileageExpense/expense/form.html.twig', [
+        return $this->render('@KimaiExpensesCommunity/expense/form.html.twig', [
             'form' => $form->createView(),
             'title' => 'Edit expense',
         ]);
     }
 
-    #[Route('/{id}/delete', name: 'mileage_expense_delete', methods: ['POST'])]
-    #[IsGranted('delete_mileage_expense')]
+    #[Route('/{id}/delete', name: 'kimai_expenses_community_delete', methods: ['POST'])]
+    #[IsGranted('delete_kimai_expenses_community')]
     public function delete(int $id, Request $request): Response
     {
         $expense = $this->findExpense($id);
@@ -129,7 +129,7 @@ final class ExpenseController extends AbstractController
 
         $this->addFlash('success', 'Expense deleted.');
 
-        return $this->redirectToRoute('mileage_expense');
+        return $this->redirectToRoute('kimai_expenses_community');
     }
 
     private function findExpense(int $id): Expense
@@ -144,7 +144,7 @@ final class ExpenseController extends AbstractController
 
     private function assertUserCanModify(Expense $expense): void
     {
-        if ($expense->isExported() && !$this->isGranted('edit_exported_mileage_expense')) {
+        if ($expense->isExported() && !$this->isGranted('edit_exported_kimai_expenses_community')) {
             throw $this->createAccessDeniedException('Exported expenses cannot be changed.');
         }
 

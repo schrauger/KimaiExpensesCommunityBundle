@@ -4,7 +4,7 @@ services:
         autoconfigure: true
         public: false
 
-    KimaiPlugin\MileageExpenseBundle\:
+    KimaiPlugin\KimaiExpensesCommunityBundle\:
         resource: '../../*'
         exclude:
             - '../../Resources'

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\Form;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\Form;
 
 use App\Entity\Activity;
 use App\Entity\Customer;
 use App\Entity\Project;
-use KimaiPlugin\MileageExpenseBundle\Entity\Expense;
-use KimaiPlugin\MileageExpenseBundle\Entity\ExpenseCategory;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\Expense;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\ExpenseCategory;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;

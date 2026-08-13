@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\Repository;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\Repository;
 
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use KimaiPlugin\MileageExpenseBundle\Entity\Expense;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\Expense;
 
 final class ExpenseRepository extends ServiceEntityRepository
 {
@@ -37,7 +37,7 @@ final class ExpenseRepository extends ServiceEntityRepository
         return $qb->getQuery()->getResult();
     }
 
-    public function countByCategory(\KimaiPlugin\MileageExpenseBundle\Entity\ExpenseCategory $category): int
+    public function countByCategory(\KimaiPlugin\KimaiExpensesCommunityBundle\Entity\ExpenseCategory $category): int
     {
         return (int) $this->createQueryBuilder('expense')
             ->select('COUNT(expense.id)')

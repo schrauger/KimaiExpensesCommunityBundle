@@ -1,8 +1,8 @@
-{% extends '@MileageExpense/expense/base.html.twig' %}
+{% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
 
 {% block expense_content %}
 <div class="d-flex justify-content-end mb-3">
-    <a class="btn btn-primary" href="{{ path('mileage_expense_category_create') }}">
+    <a class="btn btn-primary" href="{{ path('kimai_expenses_community_category_create') }}">
         <i class="fas fa-plus"></i> New category
     </a>
 </div>
@@ -35,8 +35,8 @@
                     </td>
                     <td>{{ category.description|default('—') }}</td>
                     <td class="text-end text-nowrap">
-                        <a class="btn btn-sm btn-outline-primary" href="{{ path('mileage_expense_category_edit', {id: category.id}) }}">Edit</a>
-                        <form method="post" action="{{ path('mileage_expense_category_delete', {id: category.id}) }}" class="d-inline"
+                        <a class="btn btn-sm btn-outline-primary" href="{{ path('kimai_expenses_community_category_edit', {id: category.id}) }}">Edit</a>
+                        <form method="post" action="{{ path('kimai_expenses_community_category_delete', {id: category.id}) }}" class="d-inline"
                               onsubmit="return confirm('Delete this category?');">
                             <input type="hidden" name="_token" value="{{ csrf_token('delete-category-' ~ category.id) }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>

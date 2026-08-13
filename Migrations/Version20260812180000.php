@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\Migrations;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\Migrations;
 
 use App\Doctrine\AbstractMigration;
 use Doctrine\DBAL\Schema\Schema;
@@ -22,7 +22,7 @@ final class Version20260812180000 extends AbstractMigration
          */
         $this->addSql(
             <<<'SQL'
-            CREATE TABLE kimai2_mileage_expense_category (
+            CREATE TABLE kimai2_kimai_expenses_community_category (
                 id INT AUTO_INCREMENT NOT NULL,
                 name VARCHAR(100) NOT NULL,
                 unit VARCHAR(30) NOT NULL,
@@ -31,7 +31,7 @@ final class Version20260812180000 extends AbstractMigration
                 help_text LONGTEXT DEFAULT NULL,
                 description LONGTEXT DEFAULT NULL,
                 PRIMARY KEY(id),
-                INDEX idx_mileage_expense_category_name (name)
+                INDEX idx_kimai_expenses_community_category_name (name)
             ) DEFAULT CHARACTER SET utf8mb4
               COLLATE `utf8mb4_unicode_ci`
               ENGINE = InnoDB
@@ -45,7 +45,7 @@ final class Version20260812180000 extends AbstractMigration
          */
         $this->addSql(
             <<<'SQL'
-            CREATE TABLE kimai2_mileage_expense (
+            CREATE TABLE kimai2_kimai_expenses_community (
                 id INT AUTO_INCREMENT NOT NULL,
                 date DATETIME NOT NULL,
 
@@ -65,34 +65,34 @@ final class Version20260812180000 extends AbstractMigration
 
                 PRIMARY KEY(id),
 
-                INDEX idx_mileage_expense_date (date),
-                INDEX idx_mileage_expense_category (category_id),
-                INDEX idx_mileage_expense_user (user_id),
-                INDEX idx_mileage_expense_customer (customer_id),
-                INDEX idx_mileage_expense_project (project_id),
-                INDEX idx_mileage_expense_activity (activity_id),
+                INDEX idx_kimai_expenses_community_date (date),
+                INDEX idx_kimai_expenses_community_category (category_id),
+                INDEX idx_kimai_expenses_community_user (user_id),
+                INDEX idx_kimai_expenses_community_customer (customer_id),
+                INDEX idx_kimai_expenses_community_project (project_id),
+                INDEX idx_kimai_expenses_community_activity (activity_id),
 
-                CONSTRAINT fk_mileage_expense_category
+                CONSTRAINT fk_kimai_expenses_community_category
                     FOREIGN KEY (category_id)
-                    REFERENCES kimai2_mileage_expense_category (id)
+                    REFERENCES kimai2_kimai_expenses_community_category (id)
                     ON DELETE RESTRICT,
 
-                CONSTRAINT fk_mileage_expense_user
+                CONSTRAINT fk_kimai_expenses_community_user
                     FOREIGN KEY (user_id)
                     REFERENCES kimai2_users (id)
                     ON DELETE RESTRICT,
 
-                CONSTRAINT fk_mileage_expense_customer
+                CONSTRAINT fk_kimai_expenses_community_customer
                     FOREIGN KEY (customer_id)
                     REFERENCES kimai2_customers (id)
                     ON DELETE SET NULL,
 
-                CONSTRAINT fk_mileage_expense_project
+                CONSTRAINT fk_kimai_expenses_community_project
                     FOREIGN KEY (project_id)
                     REFERENCES kimai2_projects (id)
                     ON DELETE SET NULL,
 
-                CONSTRAINT fk_mileage_expense_activity
+                CONSTRAINT fk_kimai_expenses_community_activity
                     FOREIGN KEY (activity_id)
                     REFERENCES kimai2_activities (id)
                     ON DELETE SET NULL
@@ -111,7 +111,7 @@ final class Version20260812180000 extends AbstractMigration
          */
         $this->addSql(
             <<<'SQL'
-            INSERT INTO kimai2_mileage_expense_category
+            INSERT INTO kimai2_kimai_expenses_community_category
                 (
                     name,
                     unit,
@@ -140,11 +140,11 @@ final class Version20260812180000 extends AbstractMigration
          * referencing the category table.
          */
         $this->addSql(
-            'DROP TABLE IF EXISTS kimai2_mileage_expense'
+            'DROP TABLE IF EXISTS kimai2_kimai_expenses_community'
         );
 
         $this->addSql(
-            'DROP TABLE IF EXISTS kimai2_mileage_expense_category'
+            'DROP TABLE IF EXISTS kimai2_kimai_expenses_community_category'
         );
     }
 }

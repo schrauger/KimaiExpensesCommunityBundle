@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\EventSubscriber;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\EventSubscriber;
 
 use App\Event\ConfigureMainMenuEvent;
 use App\Utils\MenuItemModel;
@@ -28,15 +28,15 @@ final class MenuSubscriber implements EventSubscriberInterface
     public function onMenuConfigure(ConfigureMainMenuEvent $event): void
     {
 //    } public function a(): void {
-        if (!$this->security->isGranted('view_mileage_expense')) {
+        if (!$this->security->isGranted('view_kimai_expenses_community')) {
             return;
         }
 
         $event->getMenu()->addChild(
             new MenuItemModel(
-                'mileage_expense',
+                'kimai_expenses_community',
                 'Expenses',
-                'mileage_expense',
+                'kimai_expenses_community',
                 [],
                 'fas fa-receipt'
             )

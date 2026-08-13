@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\Entity;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\Entity;
 
 use App\Entity\Activity;
 use App\Entity\Customer;
@@ -10,11 +10,11 @@ use App\Entity\Project;
 use App\Entity\User;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use KimaiPlugin\MileageExpenseBundle\Repository\ExpenseRepository;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseRepository;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ExpenseRepository::class)]
-#[ORM\Table(name: 'kimai2_mileage_expense')]
+#[ORM\Table(name: 'kimai2_kimai_expenses_community')]
 class Expense
 {
     #[ORM\Id]

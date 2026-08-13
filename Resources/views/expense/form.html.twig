@@ -1,4 +1,4 @@
-{% extends '@MileageExpense/expense/base.html.twig' %}
+{% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
 
 {% block expense_content %}
 <div class="card">
@@ -41,7 +41,7 @@
 
         <div class="mt-4">
             <button type="submit" class="btn btn-primary">Save expense</button>
-            <a class="btn btn-secondary" href="{{ path('mileage_expense') }}">Cancel</a>
+            <a class="btn btn-secondary" href="{{ path('kimai_expenses_community') }}">Cancel</a>
         </div>
 
         {{ form_end(form) }}

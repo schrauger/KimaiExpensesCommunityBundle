@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\Entity;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use KimaiPlugin\MileageExpenseBundle\Repository\ExpenseCategoryRepository;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseCategoryRepository;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ExpenseCategoryRepository::class)]
-#[ORM\Table(name: 'kimai2_mileage_expense_category')]
+#[ORM\Table(name: 'kimai2_kimai_expenses_community_category')]
 class ExpenseCategory
 {
     #[ORM\Id]

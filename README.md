@@ -1,4 +1,4 @@
-# MileageExpenseBundle — Phase 1
+# KimaiExpensesCommunityBundle — Phase 1
 
 A small, free, self-hosted Kimai plugin for tracking expenses using the same basic model documented for Kimai's commercial Expenses functionality:
 
@@ -26,20 +26,20 @@ The `composer.json` requires Kimai `2.65.0` or newer using Kimai's integer plugi
 Copy this directory to:
 
 ```text
-var/plugins/MileageExpenseBundle
+var/plugins/KimaiExpensesCommunityBundle
 ```
 
 Then from the Kimai application directory:
 
 ```bash
 bin/console kimai:reload -n
-bin/console kimai:bundle:mileage-expense:install
+bin/console kimai:bundle:kimai-expenses-community:install
 ```
 
 If Kimai does not immediately show the plugin after copying it in, make sure the directory is exactly:
 
 ```text
-var/plugins/MileageExpenseBundle/MileageExpenseBundle.php
+var/plugins/KimaiExpensesCommunityBundle/KimaiExpensesCommunityBundle.php
 ```
 
 ## First setup
@@ -55,13 +55,13 @@ Change the default rate under **Expenses → Categories** before recording real 
 
 The plugin registers these permissions:
 
-- `view_mileage_expense`
-- `create_mileage_expense`
-- `edit_mileage_expense`
-- `delete_mileage_expense`
-- `edit_mileage_expense_cost`
-- `manage_mileage_expense_category`
-- `edit_exported_mileage_expense`
+- `view_kimai_expenses_community`
+- `create_kimai_expenses_community`
+- `edit_kimai_expenses_community`
+- `delete_kimai_expenses_community`
+- `edit_kimai_expenses_community_cost`
+- `manage_kimai_expenses_community_category`
+- `edit_exported_kimai_expenses_community`
 
 The permissions are initially assigned to `ROLE_SUPER_ADMIN`. Other roles can be configured in **System → Roles**.
 
@@ -84,4 +84,4 @@ Those belong in the next phases once the basic workflow is confirmed on the targ
 
 ## Development notes
 
-The plugin keeps its own Doctrine migration history in `bundle_migration_mileage_expense`. Future schema changes should be added as new migration classes; do not edit the initial migration once it has been deployed.
+The plugin keeps its own Doctrine migration history in `bundle_migration_kimai_expenses_community`. Future schema changes should be added as new migration classes; do not edit the initial migration once it has been deployed.

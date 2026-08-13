@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace KimaiPlugin\MileageExpenseBundle\Repository;
+namespace KimaiPlugin\KimaiExpensesCommunityBundle\Repository;
 
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use KimaiPlugin\MileageExpenseBundle\Entity\ExpenseCategory;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\ExpenseCategory;
 
 final class ExpenseCategoryRepository extends ServiceEntityRepository
 {

@@ -1,5 +1,5 @@
 # Routes using PHP attributes are discovered automatically by Kimai.
 # This file exists so the plugin follows Kimai's standard plugin layout.
-mileage_expense:
+kimai_expenses_community:
     resource: '../../Controller/'
     type: attribute
