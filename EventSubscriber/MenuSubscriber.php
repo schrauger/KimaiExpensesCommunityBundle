@@ -10,10 +10,19 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
 /**
- * Adds the Expenses page to Kimai's main navigation for authorized users.
+ * Adds an Expenses group to Kimai's main navigation, directly below
+ * "Time tracking", with My expenses / All expenses / Categories pages.
  */
 final class MenuSubscriber implements EventSubscriberInterface
 {
+    /**
+     * Identifiers Kimai may use for the "Time tracking" entry. If the Expenses
+     * item still lands in the wrong place, dump the real identifiers with:
+     *
+     *   array_map(static fn ($c) => $c->getIdentifier(), $event->getMenu()->getChildren())
+     */
+    private const TIME_TRACKING_IDS = ['times', 'timesheet'];
+
     public function __construct(private readonly AuthorizationCheckerInterface $security)
     {
     }
@@ -27,19 +36,80 @@ final class MenuSubscriber implements EventSubscriberInterface
 
     public function onMenuConfigure(ConfigureMainMenuEvent $event): void
     {
-//    } public function a(): void {
         if (!$this->security->isGranted('view_kimai_expenses_community')) {
             return;
         }
 
-        $event->getMenu()->addChild(
-            new MenuItemModel(
-                'kimai_expenses_community',
-                'Expenses',
-                'kimai_expenses_community',
-                [],
-                'fas fa-receipt'
-            )
+        $expenses = new MenuItemModel(
+            'kimai_expenses_community',
+            'Expenses',
+            'kimai_expenses_community',
+            [],
+            'fas fa-receipt'
         );
+
+        $expenses->addChild(new MenuItemModel(
+            'kimai_expenses_community_my',
+            'My expenses',
+            'kimai_expenses_community',
+            [],
+            'fas fa-user'
+        ));
+
+        if ($this->security->isGranted('view_other_timesheet')) {
+            $expenses->addChild(new MenuItemModel(
+                'kimai_expenses_community_all',
+                'All expenses',
+                'kimai_expenses_community_all',
+                [],
+                'fas fa-users'
+            ));
+        }
+
+        if ($this->security->isGranted('manage_kimai_expenses_community_category')) {
+            $expenses->addChild(new MenuItemModel(
+                'kimai_expenses_community_category',
+                'Categories',
+                'kimai_expenses_community_category',
+                [],
+                'fas fa-tags'
+            ));
+        }
+
+        $menu = $event->getMenu();
+        $menu->addChild($expenses);
+
+        $this->moveBelowTimeTracking($menu, $expenses);
+    }
+
+    /**
+     * addChild() appends, so re-order the children to put $item right after
+     * the Time tracking entry. If that entry is not found, $item stays last.
+     */
+    private function moveBelowTimeTracking(MenuItemModel $menu, MenuItemModel $item): void
+    {
+        if (!method_exists($menu, 'setChildren')) {
+            return;
+        }
+
+        $ordered = [];
+        $placed = false;
+
+        foreach ($menu->getChildren() as $child) {
+            if ($child === $item) {
+                continue;
+            }
+
+            $ordered[] = $child;
+
+            if (!$placed && \in_array($child->getIdentifier(), self::TIME_TRACKING_IDS, true)) {
+                $ordered[] = $item;
+                $placed = true;
+            }
+        }
+
+        if ($placed) {
+            $menu->setChildren($ordered);
+        }
     }
 }

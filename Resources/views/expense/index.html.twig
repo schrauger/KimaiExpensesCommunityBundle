@@ -1,6 +1,39 @@
 {% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
 
+{% block expense_actions %}
+    {% if is_granted('create_kimai_expenses_community') %}
+        <a class="btn btn-primary" href="{{ path('kimai_expenses_community_create') }}" data-expense-modal>
+            <i class="fas fa-plus"></i> New expense
+        </a>
+    {% endif %}
+{% endblock %}
+
 {% block expense_content %}
+<div class="card mb-3">
+    <div class="card-body">
+        {{ form_start(toolbar, {attr: {'data-expense-toolbar': '', 'class': 'row g-2 align-items-end'}}) }}
+            <div class="col-md-3">{{ form_row(toolbar.searchTerm) }}</div>
+            <div class="col-md-2">{{ form_row(toolbar.begin) }}</div>
+            <div class="col-md-2">{{ form_row(toolbar.end) }}</div>
+            {% if show_user %}
+                <div class="col-md-3">{{ form_row(toolbar.user) }}</div>
+            {% endif %}
+            <div class="col-md-3">{{ form_row(toolbar.customer) }}</div>
+            <div class="col-md-3">{{ form_row(toolbar.project) }}</div>
+            <div class="col-md-3">{{ form_row(toolbar.activity) }}</div>
+            <div class="col-md-3">{{ form_row(toolbar.category) }}</div>
+            <div class="col-md-2">{{ form_row(toolbar.billable) }}</div>
+            <div class="col-md-2">{{ form_row(toolbar.exported) }}</div>
+            <div class="col-auto mb-3">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filter</button>
+                {% if app.request.query.count > 0 %}
+                    <a class="btn btn-link" href="{{ reset_url }}">Reset</a>
+                {% endif %}
+            </div>
+        {{ form_end(toolbar, {render_rest: false}) }}
+    </div>
+</div>
+
 <div class="card">
     <div class="table-responsive">
         <table class="table table-vcenter table-hover card-table">
@@ -8,27 +41,26 @@
             <tr>
                 <th>Date</th>
                 <th>Category</th>
-                <th>User</th>
                 <th>Customer</th>
                 <th>Project</th>
                 <th>Quantity</th>
                 <th>Cost</th>
                 <th>Total</th>
                 <th>Billable</th>
+                {% if show_user %}<th>User</th>{% endif %}
                 <th></th>
             </tr>
             </thead>
             <tbody>
             {% for expense in expenses %}
                 <tr>
-                    <td>{{ expense.date|date('Y-m-d H:i', timezone) }}</td>
+                    <td class="text-nowrap">{{ expense.date|date('Y-m-d H:i', timezone) }}</td>
                     <td>
                         <strong>{{ expense.category.name }}</strong>
                         {% if expense.description %}
                             <div class="text-secondary small">{{ expense.description }}</div>
                         {% endif %}
                     </td>
-                    <td>{{ expense.user.username }}</td>
                     <td>{{ expense.customer ? expense.customer.name : '—' }}</td>
                     <td>{{ expense.project ? expense.project.name : '—' }}</td>
                     <td>{{ expense.quantity|number_format(4, '.', ',') }} {{ expense.category.unit }}</td>
@@ -41,14 +73,19 @@
                             <span class="badge bg-secondary-lt">No</span>
                         {% endif %}
                     </td>
+                    {% if show_user %}
+                        <td>{{ include('@KimaiExpensesCommunity/expense/_user.html.twig', {user: expense.user}) }}</td>
+                    {% endif %}
                     <td class="text-end text-nowrap">
                         {% if is_granted('edit_kimai_expenses_community') %}
-                            <a class="btn btn-sm btn-outline-primary" href="{{ path('kimai_expenses_community_edit', {id: expense.id}) }}">Edit</a>
+                            <a class="btn btn-sm btn-outline-primary" data-expense-modal
+                               href="{{ path('kimai_expenses_community_edit', {id: expense.id}) }}">Edit</a>
                         {% endif %}
                         {% if is_granted('delete_kimai_expenses_community') %}
                             <form method="post" action="{{ path('kimai_expenses_community_delete', {id: expense.id}) }}" class="d-inline"
                                   onsubmit="return confirm('Delete this expense?');">
                                 <input type="hidden" name="_token" value="{{ csrf_token('delete-expense-' ~ expense.id) }}">
+                                <input type="hidden" name="returnUrl" value="{{ app.request.requestUri }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                             </form>
                         {% endif %}
@@ -56,7 +93,7 @@
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="10" class="text-center py-5 text-muted">No expenses found.</td>
+                    <td colspan="{{ show_user ? 10 : 9 }}" class="text-center py-5 text-muted">No expenses found.</td>
                 </tr>
             {% endfor %}
             </tbody>

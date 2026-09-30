@@ -1,0 +1,9 @@
+{# Username cell: avatar (or initials) plus display name. Expects `user`. #}
+<div class="d-flex align-items-center text-nowrap">
+    {% if user.avatar %}
+        <span class="avatar avatar-xs me-2" style="background-image: url('{{ user.avatar|e('html_attr') }}')"></span>
+    {% else %}
+        <span class="avatar avatar-xs me-2">{{ user.initials }}</span>
+    {% endif %}
+    <span>{{ user.displayName }}</span>
+</div>

@@ -1,0 +1,262 @@
+<script>
+(function () {
+    'use strict';
+
+    // Finds a field by name in both naming styles: "expense[customer]"
+    // (entity form) and "customer" (filter toolbar, empty block prefix).
+    function pick(root, field) {
+        return root.querySelector('[name="' + field + '"], [name$="[' + field + ']"]');
+    }
+
+    // "0.7000" -> "0.70", "1.0000" -> "1.00", "0.6725" -> "0.6725"
+    function formatDecimal(value, minDecimals) {
+        const text = String(value).trim();
+        if (!/^-?\d+(\.\d+)?$/.test(text)) {
+            return text;
+        }
+        const parts = text.split('.');
+        let fraction = (parts[1] || '').replace(/0+$/, '');
+        while (fraction.length < minDecimals) {
+            fraction += '0';
+        }
+        return fraction ? parts[0] + '.' + fraction : parts[0];
+    }
+
+    // ---- Customer -> Project -------------------------------------------------
+    // Keeps every project option in memory and rebuilds the <select> with only
+    // the selected customer's projects (works in every browser, unlike hiding
+    // <option> elements). With autoSelect, a customer that has exactly one
+    // project selects it automatically, like Kimai's time tracking.
+    function linkCustomerAndProject(customer, project, autoSelect) {
+        if (!customer || !project) {
+            return;
+        }
+
+        const all = Array.from(project.options);
+        const placeholder = all.find(function (o) { return o.value === ''; }) || null;
+
+        function projectsFor(customerId, alwaysKeep) {
+            return all.filter(function (o) {
+                if (o.value === '') {
+                    return false;
+                }
+                return customerId === '' || o.dataset.customer === customerId || o.value === alwaysKeep;
+            });
+        }
+
+        function render(options, selectedValue) {
+            project.innerHTML = '';
+            if (placeholder) {
+                project.appendChild(placeholder);
+            }
+            options.forEach(function (o) { project.appendChild(o); });
+            project.value = selectedValue;
+        }
+
+        // Initial load: narrow the list, but never drop the current project.
+        const current = project.value;
+        render(projectsFor(customer.value, current), current);
+
+        customer.addEventListener('change', function () {
+            const previous = project.value;
+            const matches = projectsFor(customer.value, '');
+
+            let next = matches.some(function (o) { return o.value === previous; }) ? previous : '';
+            if (autoSelect && customer.value !== '' && matches.length === 1) {
+                next = matches[0].value;
+            }
+
+            render(matches, next);
+
+            if (project.value !== previous) {
+                project.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    }
+
+    // ---- Expense form (full page and modal) ----------------------------------
+    function initExpenseForm(form) {
+        if (form.dataset.expenseReady) {
+            return;
+        }
+        form.dataset.expenseReady = '1';
+
+        const customer = pick(form, 'customer');
+        const project = pick(form, 'project');
+        const category = pick(form, 'category');
+        const quantity = pick(form, 'quantity');
+        const cost = pick(form, 'cost');
+        const total = form.querySelector('[data-expense-total]');
+        const unitLabel = form.querySelector('[data-expense-unit]');
+        const extended = form.querySelector('[data-expense-extended]');
+        const extendedToggle = form.querySelector('[data-expense-toggle]');
+        const canEditCost = !!cost && !cost.disabled;
+
+        linkCustomerAndProject(customer, project, true);
+
+        function selectedCategory() {
+            return category ? category.options[category.selectedIndex] : null;
+        }
+
+        function updateRateFromCategory() {
+            if (!category || !cost || !canEditCost) {
+                return;
+            }
+            const option = selectedCategory();
+            const rate = option ? option.dataset.defaultCost : null;
+            if (rate !== null && rate !== undefined && rate !== '') {
+                cost.value = formatDecimal(rate, 2);
+            }
+        }
+
+        function updateTotal() {
+            const q = parseFloat((quantity && quantity.value) || '0');
+            const c = parseFloat((cost && cost.value) || '0');
+            const result = Number.isFinite(q * c) ? q * c : 0;
+            if (total) {
+                total.textContent = result.toFixed(2);
+            }
+            const option = selectedCategory();
+            if (unitLabel) {
+                unitLabel.textContent = option ? ' ' + (option.textContent || '') : '';
+            }
+        }
+
+        // The cost field lives in a collapsed accordion. If the browser rejects
+        // it (e.g. it was cleared), open the accordion so the message is visible.
+        if (cost) {
+            cost.addEventListener('invalid', function () {
+                if (extended) { extended.classList.add('show'); }
+                if (extendedToggle) {
+                    extendedToggle.classList.remove('collapsed');
+                    extendedToggle.setAttribute('aria-expanded', 'true');
+                }
+            });
+            cost.addEventListener('input', updateTotal);
+        }
+
+        if (category) {
+            category.addEventListener('change', function () {
+                updateRateFromCategory();
+                updateTotal();
+            });
+        }
+        if (quantity) {
+            quantity.addEventListener('input', updateTotal);
+        }
+
+        updateTotal();
+    }
+
+    // ---- Filter toolbar ------------------------------------------------------
+    function initToolbar(form) {
+        if (form.dataset.expenseReady) {
+            return;
+        }
+        form.dataset.expenseReady = '1';
+        linkCustomerAndProject(pick(form, 'customer'), pick(form, 'project'), false);
+    }
+
+    function initAll(root) {
+        root.querySelectorAll('form[data-expense-form]').forEach(initExpenseForm);
+        root.querySelectorAll('form[data-expense-toolbar]').forEach(initToolbar);
+    }
+
+    // ---- Modal ---------------------------------------------------------------
+    const modalEl = document.getElementById('expense-modal');
+    const trigger = document.getElementById('expense-modal-trigger');
+    const content = modalEl ? modalEl.querySelector('.modal-content') : null;
+
+    const spinner = '<div class="modal-body text-center py-5"><div class="spinner-border" role="status"></div></div>';
+    const loadError = '<div class="modal-header"><h5 class="modal-title">Expense</h5>'
+        + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>'
+        + '<div class="modal-body"><div class="alert alert-danger mb-0">The form could not be loaded. Please try again.</div></div>';
+
+    if (modalEl && trigger && content) {
+        // Bootstrap recommends modals as direct children of <body>; this avoids
+        // stacking-context problems with the page layout.
+        document.body.appendChild(modalEl);
+
+        // Remember where the user was, so saving returns to the same filtered list.
+        function withReturnUrl(url) {
+            const target = new URL(url, window.location.href);
+            if (!target.searchParams.has('returnUrl')) {
+                target.searchParams.set('returnUrl', window.location.pathname + window.location.search);
+            }
+            return target.toString();
+        }
+
+        async function load(url, body) {
+            try {
+                const response = await fetch(url, {
+                    method: body ? 'POST' : 'GET',
+                    body: body || undefined,
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                const type = response.headers.get('Content-Type') || '';
+                if (type.indexOf('application/json') !== -1) {
+                    const data = await response.json();
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    }
+                    return;
+                }
+
+                // 422 = the form came back with validation errors, which we want to show.
+                if (!response.ok && response.status !== 422) {
+                    content.innerHTML = loadError;
+                    return;
+                }
+
+                content.innerHTML = await response.text();
+                initAll(content);
+
+                // Ask Kimai to activate its widgets (date picker etc.) in the new content.
+                document.dispatchEvent(new CustomEvent('kimai.reloadedContent', { detail: '#expense-modal' }));
+            } catch (e) {
+                content.innerHTML = loadError;
+            }
+        }
+
+        document.addEventListener('click', function (event) {
+            const link = event.target.closest('[data-expense-modal]');
+            if (!link) {
+                return;
+            }
+            // Let ctrl/cmd/shift/middle-click open the normal page.
+            if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
+                return;
+            }
+            event.preventDefault();
+            content.innerHTML = spinner;
+            trigger.click();
+            load(withReturnUrl(link.href));
+        });
+
+        modalEl.addEventListener('submit', function (event) {
+            const form = event.target.closest('form[data-expense-form]');
+            if (!form) {
+                return;
+            }
+            event.preventDefault();
+            const submit = form.querySelector('[type="submit"]');
+            if (submit) {
+                submit.disabled = true;
+            }
+            load(form.action, new FormData(form));
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            content.innerHTML = '';
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () { initAll(document); });
+    } else {
+        initAll(document);
+    }
+})();
+</script>

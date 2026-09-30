@@ -1,0 +1,49 @@
+{# Fields shared by the full-page form and the modal. Expects `form`. #}
+{# Keep Extended settings open if the cost field has a validation error. #}
+{% set costHasErrors = form.cost.vars.errors|length > 0 %}
+
+{{ form_errors(form) }}
+
+<div class="row">
+    <div class="col-12">{{ form_row(form.date) }}</div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">{{ form_row(form.customer) }}</div>
+    <div class="col-md-4">{{ form_row(form.project) }}</div>
+    <div class="col-md-4">{{ form_row(form.activity) }}</div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">{{ form_row(form.category) }}</div>
+    <div class="col-md-6">{{ form_row(form.quantity) }}</div>
+</div>
+
+{{ form_row(form.billable) }}
+{{ form_row(form.description) }}
+
+<div class="accordion mt-3" id="expense-extended-accordion">
+    <div class="accordion-item">
+        <h2 class="accordion-header" id="expense-extended-heading">
+            <button class="accordion-button{{ costHasErrors ? '' : ' collapsed' }}" type="button"
+                    data-expense-toggle
+                    data-bs-toggle="collapse" data-bs-target="#expense-extended"
+                    aria-expanded="{{ costHasErrors ? 'true' : 'false' }}" aria-controls="expense-extended">
+                Extended settings
+            </button>
+        </h2>
+        <div id="expense-extended" data-expense-extended
+             class="accordion-collapse collapse{{ costHasErrors ? ' show' : '' }}"
+             aria-labelledby="expense-extended-heading">
+            <div class="accordion-body">
+                {{ form_row(form.cost) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-3 mb-0">
+    <strong>Calculated total:</strong>
+    <span data-expense-total>0.00</span>
+    <span data-expense-unit></span>
+</div>
