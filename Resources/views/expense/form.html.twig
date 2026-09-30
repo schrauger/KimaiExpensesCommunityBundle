@@ -6,7 +6,7 @@
     <div class="card-body">
         {{ form_start(form, {attr: {'data-expense-form': ''}}) }}
         {{ include('@KimaiExpensesCommunity/expense/_form_fields.html.twig') }}
-
+        <pre>{{ form.date.vars.value|json_encode(constant('JSON_PRETTY_PRINT')) }}</pre>
         <div class="mt-4">
             <button type="submit" class="btn btn-primary">Save expense</button>
             <a class="btn btn-secondary" href="{{ cancel_url|default(path('kimai_expenses_community')) }}">Cancel</a>
