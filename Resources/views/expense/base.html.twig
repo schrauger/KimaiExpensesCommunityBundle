@@ -22,14 +22,5 @@
     {% block expense_content %}{% endblock %}
 </div>
 
-{# Modal host. Content is loaded over AJAX by the script below. #}
-<div class="modal fade" id="expense-modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content"></div>
-    </div>
-</div>
-<button type="button" class="d-none" id="expense-modal-trigger" tabindex="-1" aria-hidden="true"
-        data-bs-toggle="modal" data-bs-target="#expense-modal"></button>
-
 {{ include('@KimaiExpensesCommunity/expense/_scripts.html.twig') }}
 {% endblock %}

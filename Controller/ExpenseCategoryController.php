@@ -10,7 +10,6 @@ use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\ExpenseCategory;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Form\ExpenseCategoryType;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseCategoryRepository;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseRepository;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -70,10 +69,9 @@ final class ExpenseCategoryController extends AbstractController
     }
 
     /**
-     * Shared by create and edit. Renders the full page normally and only the
-     * modal content for AJAX requests. On success an AJAX request gets a JSON
-     * redirect (the list reloads and shows the flash message); an invalid AJAX
-     * submit returns the form again with HTTP 422.
+     * Shared by create and edit. Works like Kimai's own controllers so that
+     * Kimai's modal-ajax-form handling applies: AJAX requests get only the
+     * modal markup, a valid submit redirects, an invalid submit re-renders.
      */
     private function processForm(Request $request, ExpenseCategory $category, bool $isNew): Response
     {
@@ -92,27 +90,17 @@ final class ExpenseCategoryController extends AbstractController
 
             $this->addFlash('success', $isNew ? 'Category created.' : 'Category updated.');
 
-            $listUrl = $this->generateUrl('kimai_expenses_community_category');
-
-            if ($request->isXmlHttpRequest()) {
-                return new JsonResponse(['redirect' => $listUrl]);
-            }
-
-            return $this->redirect($listUrl);
+            return $this->redirectToRoute('kimai_expenses_community_category');
         }
 
         $template = $request->isXmlHttpRequest()
             ? '@KimaiExpensesCommunity/category/modal.html.twig'
             : '@KimaiExpensesCommunity/category/form.html.twig';
 
-        return $this->render(
-            $template,
-            [
-                'form' => $form->createView(),
-                'title' => $isNew ? 'New expense category' : 'Edit expense category',
-            ],
-            new Response(null, $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK)
-        );
+        return $this->render($template, [
+            'form' => $form->createView(),
+            'title' => $isNew ? 'New expense category' : 'Edit expense category',
+        ]);
     }
 
     private function findCategory(int $id): ExpenseCategory

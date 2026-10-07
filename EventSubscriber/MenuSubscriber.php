@@ -48,13 +48,16 @@ final class MenuSubscriber implements EventSubscriberInterface
             'fas fa-receipt'
         );
 
-        $expenses->addChild(new MenuItemModel(
+        $my = new MenuItemModel(
             'kimai_expenses_community_my',
             'My expenses',
             'kimai_expenses_community',
             [],
             'fas fa-user'
-        ));
+        );
+        // Pages that belong to this entry but have no menu item of their own.
+        $this->setChildRoutes($my, ['kimai_expenses_community_create', 'kimai_expenses_community_edit']);
+        $expenses->addChild($my);
 
         if ($this->security->isGranted('view_other_timesheet')) {
             $expenses->addChild(new MenuItemModel(
@@ -67,19 +70,34 @@ final class MenuSubscriber implements EventSubscriberInterface
         }
 
         if ($this->security->isGranted('manage_kimai_expenses_community_category')) {
-            $expenses->addChild(new MenuItemModel(
+            $categories = new MenuItemModel(
                 'kimai_expenses_community_category',
                 'Categories',
                 'kimai_expenses_community_category',
                 [],
                 'fas fa-tags'
-            ));
+            );
+            $this->setChildRoutes($categories, [
+                'kimai_expenses_community_category_create',
+                'kimai_expenses_community_category_edit',
+            ]);
+            $expenses->addChild($categories);
         }
 
         $menu = $event->getMenu();
         $menu->addChild($expenses);
 
         $this->moveBelowTimeTracking($menu, $expenses);
+    }
+
+    /**
+     * @param string[] $routes
+     */
+    private function setChildRoutes(MenuItemModel $item, array $routes): void
+    {
+        if (method_exists($item, 'setChildRoutes')) {
+            $item->setChildRoutes($routes);
+        }
     }
 
     /**

@@ -2,13 +2,17 @@
 
 {% block expense_actions %}
     {% if is_granted('create_kimai_expenses_community') %}
-        <a class="btn btn-primary" href="{{ path('kimai_expenses_community_create') }}" data-expense-modal>
+        {# "modal-ajax-form" is Kimai's own class: it opens the link in Kimai's modal. #}
+        <a class="btn btn-primary modal-ajax-form" data-event="kimai.expenseUpdate"
+           href="{{ path('kimai_expenses_community_create', {returnUrl: app.request.requestUri}) }}">
             <i class="fas fa-plus"></i> New expense
         </a>
     {% endif %}
 {% endblock %}
 
 {% block expense_content %}
+{% set colspan = 10 + (show_user ? 1 : 0) + (can_change_export ? 1 : 0) %}
+
 <div class="card mb-3">
     <div class="card-body">
         {{ form_start(toolbar, {attr: {'data-expense-toolbar': '', 'class': 'row g-2 align-items-end'}}) }}
@@ -34,11 +38,23 @@
     </div>
 </div>
 
+{% if can_change_export %}
+    {# Table rows reference this form with the HTML "form" attribute, so the
+       delete forms in each row are not nested inside another form. #}
+    <form id="expense-bulk" method="post" action="{{ path('kimai_expenses_community_export_state') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('expense-export-state') }}">
+        <input type="hidden" name="returnUrl" value="{{ app.request.requestUri }}">
+    </form>
+{% endif %}
+
 <div class="card">
     <div class="table-responsive">
         <table class="table table-vcenter table-hover card-table">
             <thead>
             <tr>
+                {% if can_change_export %}
+                    <th class="w-1"><input class="form-check-input" type="checkbox" data-expense-select-all aria-label="Select all"></th>
+                {% endif %}
                 <th>Date</th>
                 <th>Category</th>
                 <th>Customer</th>
@@ -47,6 +63,7 @@
                 <th>Cost</th>
                 <th>Total</th>
                 <th>Billable</th>
+                <th>Exported</th>
                 {% if show_user %}<th>User</th>{% endif %}
                 <th></th>
             </tr>
@@ -54,6 +71,9 @@
             <tbody>
             {% for expense in expenses %}
                 <tr>
+                    {% if can_change_export %}
+                        <td><input class="form-check-input" type="checkbox" name="ids[]" value="{{ expense.id }}" form="expense-bulk" aria-label="Select expense"></td>
+                    {% endif %}
                     <td class="text-nowrap">{{ expense.date|date('Y-m-d H:i', timezone) }}</td>
                     <td>
                         <strong>{{ expense.category.name }}</strong>
@@ -73,13 +93,20 @@
                             <span class="badge bg-secondary-lt">No</span>
                         {% endif %}
                     </td>
+                    <td>
+                        {% if expense.exported %}
+                            <span class="badge bg-blue-lt">Yes</span>
+                        {% else %}
+                            <span class="badge bg-secondary-lt">No</span>
+                        {% endif %}
+                    </td>
                     {% if show_user %}
                         <td>{{ include('@KimaiExpensesCommunity/expense/_user.html.twig', {user: expense.user}) }}</td>
                     {% endif %}
                     <td class="text-end text-nowrap">
                         {% if is_granted('edit_kimai_expenses_community') %}
-                            <a class="btn btn-sm btn-outline-primary" data-expense-modal
-                               href="{{ path('kimai_expenses_community_edit', {id: expense.id}) }}">Edit</a>
+                            <a class="btn btn-sm btn-outline-primary modal-ajax-form" data-event="kimai.expenseUpdate"
+                               href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri}) }}">Edit</a>
                         {% endif %}
                         {% if is_granted('delete_kimai_expenses_community') %}
                             <form method="post" action="{{ path('kimai_expenses_community_delete', {id: expense.id}) }}" class="d-inline"
@@ -93,11 +120,19 @@
                 </tr>
             {% else %}
                 <tr>
-                    <td colspan="{{ show_user ? 10 : 9 }}" class="text-center py-5 text-muted">No expenses found.</td>
+                    <td colspan="{{ colspan }}" class="text-center py-5 text-muted">No expenses found.</td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
     </div>
+
+    {% if can_change_export and expenses|length > 0 %}
+        <div class="card-footer d-flex align-items-center gap-2">
+            <span class="text-secondary">With selected:</span>
+            <button type="submit" form="expense-bulk" name="state" value="not_exported" class="btn btn-sm btn-outline-secondary">Mark as not exported</button>
+            <button type="submit" form="expense-bulk" name="state" value="exported" class="btn btn-sm btn-outline-secondary">Mark as exported</button>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

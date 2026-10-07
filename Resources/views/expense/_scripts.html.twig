@@ -22,11 +22,23 @@
         return fraction ? parts[0] + '.' + fraction : parts[0];
     }
 
+    // Kimai may replace a <select> with its own enhanced widget (Tom Select).
+    // After changing the underlying <option> list, tell the widget to re-read it.
+    function syncSelect(select, value) {
+        select.value = value;
+        const widget = select.tomselect;
+        if (widget) {
+            widget.clear(true);
+            widget.clearOptions();
+            widget.sync();
+            widget.setValue(value, true);
+        }
+    }
+
     // ---- Customer -> Project -------------------------------------------------
     // Keeps every project option in memory and rebuilds the <select> with only
-    // the selected customer's projects (works in every browser, unlike hiding
-    // <option> elements). With autoSelect, a customer that has exactly one
-    // project selects it automatically, like Kimai's time tracking.
+    // the selected customer's projects. With autoSelect, a customer that has
+    // exactly one project selects it automatically, like Kimai's time tracking.
     function linkCustomerAndProject(customer, project, autoSelect) {
         if (!customer || !project) {
             return;
@@ -50,7 +62,7 @@
                 project.appendChild(placeholder);
             }
             options.forEach(function (o) { project.appendChild(o); });
-            project.value = selectedValue;
+            syncSelect(project, selectedValue);
         }
 
         // Initial load: narrow the list, but never drop the current project.
@@ -74,7 +86,7 @@
         });
     }
 
-    // ---- Expense form (full page and modal) ----------------------------------
+    // ---- Expense form (full page and Kimai modal) ----------------------------
     function initExpenseForm(form) {
         if (form.dataset.expenseReady) {
             return;
@@ -157,101 +169,45 @@
         linkCustomerAndProject(pick(form, 'customer'), pick(form, 'project'), false);
     }
 
+    // ---- Select-all checkbox in the list -------------------------------------
+    function initSelectAll(box) {
+        if (box.dataset.expenseReady) {
+            return;
+        }
+        box.dataset.expenseReady = '1';
+        box.addEventListener('change', function () {
+            document.querySelectorAll('input[name="ids[]"]').forEach(function (cb) {
+                cb.checked = box.checked;
+            });
+        });
+    }
+
     function initAll(root) {
         root.querySelectorAll('form[data-expense-form]').forEach(initExpenseForm);
         root.querySelectorAll('form[data-expense-toolbar]').forEach(initToolbar);
+        root.querySelectorAll('[data-expense-select-all]').forEach(initSelectAll);
     }
 
-    // ---- Modal ---------------------------------------------------------------
-    const modalEl = document.getElementById('expense-modal');
-    const trigger = document.getElementById('expense-modal-trigger');
-    const content = modalEl ? modalEl.querySelector('.modal-content') : null;
-
-    const spinner = '<div class="modal-body text-center py-5"><div class="spinner-border" role="status"></div></div>';
-    const loadError = '<div class="modal-header"><h5 class="modal-title">Expense</h5>'
-        + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>'
-        + '<div class="modal-body"><div class="alert alert-danger mb-0">The form could not be loaded. Please try again.</div></div>';
-
-    if (modalEl && trigger && content) {
-        // Bootstrap recommends modals as direct children of <body>; this avoids
-        // stacking-context problems with the page layout.
-        document.body.appendChild(modalEl);
-
-        // Remember where the user was, so saving returns to the same filtered list.
-        function withReturnUrl(url) {
-            const target = new URL(url, window.location.href);
-            if (!target.searchParams.has('returnUrl')) {
-                target.searchParams.set('returnUrl', window.location.pathname + window.location.search);
-            }
-            return target.toString();
+    // Kimai's own modal inserts the form after the page has loaded, and swaps
+    // it again after a validation error. Watch for new forms and initialise
+    // them; initAll() skips anything that is already set up.
+    let scheduled = false;
+    new MutationObserver(function () {
+        if (scheduled) {
+            return;
         }
-
-        async function load(url, body) {
-            try {
-                const response = await fetch(url, {
-                    method: body ? 'POST' : 'GET',
-                    body: body || undefined,
-                    credentials: 'same-origin',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-
-                const type = response.headers.get('Content-Type') || '';
-                if (type.indexOf('application/json') !== -1) {
-                    const data = await response.json();
-                    if (data.redirect) {
-                        window.location.href = data.redirect;
-                    }
-                    return;
-                }
-
-                // 422 = the form came back with validation errors, which we want to show.
-                if (!response.ok && response.status !== 422) {
-                    content.innerHTML = loadError;
-                    return;
-                }
-
-                content.innerHTML = await response.text();
-                initAll(content);
-
-                // Ask Kimai to activate its widgets (date picker etc.) in the new content.
-                document.dispatchEvent(new CustomEvent('kimai.reloadedContent', { detail: '#expense-modal' }));
-            } catch (e) {
-                content.innerHTML = loadError;
-            }
-        }
-
-        document.addEventListener('click', function (event) {
-            const link = event.target.closest('[data-expense-modal]');
-            if (!link) {
-                return;
-            }
-            // Let ctrl/cmd/shift/middle-click open the normal page.
-            if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
-                return;
-            }
-            event.preventDefault();
-            content.innerHTML = spinner;
-            trigger.click();
-            load(withReturnUrl(link.href));
+        scheduled = true;
+        window.requestAnimationFrame(function () {
+            scheduled = false;
+            initAll(document);
         });
+    }).observe(document.body, { childList: true, subtree: true });
 
-        modalEl.addEventListener('submit', function (event) {
-            const form = event.target.closest('form[data-expense-form]');
-            if (!form) {
-                return;
-            }
-            event.preventDefault();
-            const submit = form.querySelector('[type="submit"]');
-            if (submit) {
-                submit.disabled = true;
-            }
-            load(form.action, new FormData(form));
-        });
-
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            content.innerHTML = '';
-        });
-    }
+    // Links with data-event="kimai.expenseUpdate" make Kimai fire this event
+    // after a successful save in its modal. Reload so the list shows the change.
+    document.addEventListener('kimai.expenseUpdate', function () {
+        window.location.reload();
+    });
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', function () { initAll(document); });

@@ -12,7 +12,6 @@ use KimaiPlugin\KimaiExpensesCommunityBundle\Form\ExpenseToolbarType;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Form\ExpenseType;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Query\ExpenseQuery;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseRepository;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -83,6 +82,68 @@ final class ExpenseController extends AbstractController
         return $this->redirect($this->resolveReturnUrl($request));
     }
 
+    /**
+     * Batch update of the export state ("Mark as exported / not exported"),
+     * the equivalent of Kimai's batch update for timesheets.
+     *
+     * Like Kimai, changing the state needs the "edit export" permission, and
+     * records that are already exported are locked unless the user also has
+     * the "edit exported" permission.
+     */
+    #[Route('/export-state', name: 'kimai_expenses_community_export_state', methods: ['POST'])]
+    #[IsGranted('view_kimai_expenses_community')]
+    #[IsGranted('edit_export_kimai_expenses_community')]
+    public function exportState(Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('expense-export-state', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Invalid CSRF token.');
+        }
+
+        $returnUrl = $this->resolveReturnUrl($request);
+        $target = $request->request->get('state') === 'exported';
+        $ids = array_values(array_filter(array_map('intval', $request->request->all('ids'))));
+
+        if ($ids === []) {
+            $this->addFlash('danger', 'No expenses selected.');
+
+            return $this->redirect($returnUrl);
+        }
+
+        $changed = 0;
+        $skipped = 0;
+
+        foreach ($this->expenses->findBy(['id' => $ids]) as $expense) {
+            if (!$this->canModify($expense)) {
+                ++$skipped;
+                continue;
+            }
+
+            if ($expense->isExported() !== $target) {
+                $expense->setExported($target);
+                ++$changed;
+            }
+        }
+
+        $this->entityManager->flush();
+
+        if ($changed > 0) {
+            $this->addFlash('success', sprintf(
+                '%d expense(s) marked as %s.',
+                $changed,
+                $target ? 'exported' : 'not exported'
+            ));
+        }
+
+        if ($skipped > 0) {
+            $this->addFlash('danger', sprintf(
+                '%d expense(s) could not be changed (locked as exported, or owned by another user).',
+                $skipped
+            ));
+        }
+
+        return $this->redirect($returnUrl);
+    }
+
     private function listExpenses(Request $request, bool $allUsers): Response
     {
         $user = $this->getAuthenticatedUser();
@@ -103,6 +164,7 @@ final class ExpenseController extends AbstractController
             'expenses' => $this->expenses->findByQuery($query, new \DateTimeZone($user->getTimezone())),
             'toolbar' => $toolbar->createView(),
             'show_user' => $allUsers,
+            'can_change_export' => $this->isGranted('edit_export_kimai_expenses_community'),
             'reset_url' => $this->generateUrl($allUsers ? 'kimai_expenses_community_all' : 'kimai_expenses_community'),
             'title' => $allUsers ? 'All expenses' : 'My expenses',
             'timezone' => $user->getTimezone(),
@@ -110,10 +172,11 @@ final class ExpenseController extends AbstractController
     }
 
     /**
-     * Shared by create and edit. Renders the full page normally, and only the
-     * modal content for AJAX requests. On success an AJAX request gets a JSON
-     * redirect (the page then reloads and shows the flash message); an invalid
-     * AJAX submit returns the form again with HTTP 422.
+     * Shared by create and edit.
+     *
+     * Behaves like Kimai's own controllers so that Kimai's modal-ajax-form
+     * handling works: AJAX requests get only the modal markup, a valid submit
+     * redirects, and an invalid submit returns the form again (HTTP 200).
      */
     private function processForm(Request $request, Expense $expense, bool $isNew): Response
     {
@@ -132,6 +195,7 @@ final class ExpenseController extends AbstractController
         $form = $this->createForm(ExpenseType::class, $expense, [
             'action' => $action,
             'can_edit_cost' => $canEditCost,
+            'can_edit_export' => $this->isGranted('edit_export_kimai_expenses_community'),
             'timezone' => $user->getTimezone(),
         ]);
         $form->handleRequest($request);
@@ -149,10 +213,6 @@ final class ExpenseController extends AbstractController
 
             $this->addFlash('success', $isNew ? 'Expense created.' : 'Expense updated.');
 
-            if ($request->isXmlHttpRequest()) {
-                return new JsonResponse(['redirect' => $returnUrl]);
-            }
-
             return $this->redirect($returnUrl);
         }
 
@@ -160,15 +220,11 @@ final class ExpenseController extends AbstractController
             ? '@KimaiExpensesCommunity/expense/modal.html.twig'
             : '@KimaiExpensesCommunity/expense/form.html.twig';
 
-        return $this->render(
-            $template,
-            [
-                'form' => $form->createView(),
-                'title' => $isNew ? 'New expense' : 'Edit expense',
-                'cancel_url' => $returnUrl,
-            ],
-            new Response(null, $form->isSubmitted() ? Response::HTTP_UNPROCESSABLE_ENTITY : Response::HTTP_OK)
-        );
+        return $this->render($template, [
+            'form' => $form->createView(),
+            'title' => $isNew ? 'New expense' : 'Edit expense',
+            'cancel_url' => $returnUrl,
+        ]);
     }
 
     /**
@@ -202,17 +258,27 @@ final class ExpenseController extends AbstractController
         return $expense;
     }
 
+    private function canModify(Expense $expense): bool
+    {
+        if ($expense->isExported() && !$this->isGranted('edit_exported_kimai_expenses_community')) {
+            return false;
+        }
+
+        if (!$this->isGranted('view_other_timesheet')) {
+            return $expense->getUser()->getId() === $this->getAuthenticatedUser()->getId();
+        }
+
+        return true;
+    }
+
     private function assertUserCanModify(Expense $expense): void
     {
         if ($expense->isExported() && !$this->isGranted('edit_exported_kimai_expenses_community')) {
             throw $this->createAccessDeniedException('Exported expenses cannot be changed.');
         }
 
-        if (!$this->isGranted('view_other_timesheet')) {
-            $currentUser = $this->getAuthenticatedUser();
-            if ($expense->getUser()->getId() !== $currentUser->getId()) {
-                throw $this->createAccessDeniedException();
-            }
+        if (!$this->canModify($expense)) {
+            throw $this->createAccessDeniedException();
         }
     }
 
