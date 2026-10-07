@@ -1,15 +1,15 @@
-{# Full-page version of the category form (used when the modal is unavailable). #}
+{# Full-page version of the expense form (used when JavaScript/modal is unavailable). #}
 {% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
 
 {% block expense_content %}
 <div class="card">
     <div class="card-body">
-        {{ form_start(form) }}
-        {{ include('@KimaiExpensesCommunity/category/_form_fields.html.twig') }}
+        {{ form_start(form, {attr: {'data-expense-form': ''}}) }}
+        {{ include('@KimaiExpensesCommunity/expense/_form_fields.html.twig') }}
 
         <div class="mt-4">
-            <button type="submit" class="btn btn-primary">Save category</button>
-            <a class="btn btn-secondary" href="{{ path('kimai_expenses_community_category') }}">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save expense</button>
+            <a class="btn btn-secondary" href="{{ cancel_url|default(path('kimai_expenses_community')) }}">Cancel</a>
         </div>
         {{ form_end(form) }}
     </div>

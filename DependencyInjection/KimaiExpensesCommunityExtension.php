@@ -40,6 +40,8 @@ final class KimaiExpensesCommunityExtension extends AbstractPluginExtension impl
                         'edit_kimai_expenses_community_cost',
                         'manage_kimai_expenses_community_category',
                         'edit_exported_kimai_expenses_community',
+                        // Set the export state (like edit_export_own_timesheet).
+                        'edit_export_kimai_expenses_community',
                     ],
                 ],
             ],

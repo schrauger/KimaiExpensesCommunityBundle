@@ -1,0 +1,12 @@
+{# Fields shared by the full-page category form and the modal. Expects `form`. #}
+{{ form_errors(form) }}
+
+<div class="row">
+    <div class="col-md-6">{{ form_row(form.name) }}</div>
+    <div class="col-md-3">{{ form_row(form.unit) }}</div>
+    <div class="col-md-3">{{ form_row(form.defaultCost) }}</div>
+</div>
+
+{{ form_row(form.visible) }}
+{{ form_row(form.helpText) }}
+{{ form_row(form.description) }}
