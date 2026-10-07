@@ -41,10 +41,6 @@ final class ExpenseInvoiceItemRepository implements InvoiceItemRepositoryInterfa
              * project's customer when generating invoices.
              */
             ->andWhere('expense.project IS NOT NULL')
-            /*
-             * Kimai's invoice query defaults to non-exported items.
-             * Respect either explicit state.
-             */
             ->orderBy('expense.date', $query->getOrder())
             ->addOrderBy('expense.id', $query->getOrder());
 
@@ -82,10 +78,6 @@ final class ExpenseInvoiceItemRepository implements InvoiceItemRepositoryInterfa
 
         /*
          * Customer filtering.
-         *
-         * The expense's customer normally follows its project, but filtering
-         * through the stored customer also supports expenses entered before
-         * the project/customer relationship was selected.
          */
         if ($query->hasCustomers()) {
             $customerIds = $query->getCustomerIds();
@@ -114,10 +106,9 @@ final class ExpenseInvoiceItemRepository implements InvoiceItemRepositoryInterfa
          * Activity filtering.
          */
         if ($query->hasActivities()) {
-            $activities = $query->getActivities();
             $activityIds = [];
 
-            foreach ($activities as $activity) {
+            foreach ($query->getActivities() as $activity) {
                 if ($activity->getId() !== null) {
                     $activityIds[] = $activity->getId();
                 }
@@ -132,9 +123,6 @@ final class ExpenseInvoiceItemRepository implements InvoiceItemRepositoryInterfa
 
         /*
          * User filtering.
-         *
-         * This matters when an invoice query has been narrowed to one or
-         * more users.
          */
         if ($query->hasUsers()) {
             $userIds = [];
@@ -155,20 +143,22 @@ final class ExpenseInvoiceItemRepository implements InvoiceItemRepositoryInterfa
         /** @var Expense[] $expenses */
         $expenses = $qb->getQuery()->getResult();
 
+        /*
+         * Must be initialised here. Previously $items only came into existence
+         * inside the loop, so when no expense matched (or every match was
+         * skipped) the method returned an undefined variable, which broke
+         * invoice creation with a 500 error.
+         */
+        $items = [];
+
         foreach ($expenses as $expense) {
-            /*
-             * A project is mandatory for invoice output. The SQL condition
-             * above guarantees this, but keeping the check here makes the
-             * adapter invariant explicit as well.
-             */
             if ($expense->getProject() === null) {
                 continue;
             }
 
             /*
-             * If the project belongs to a different customer than the
-             * expense's stored customer, use the project's customer as the
-             * authoritative invoice relationship.
+             * Skip expenses whose stored customer disagrees with the
+             * project's customer.
              */
             if (
                 $expense->getCustomer() !== null
@@ -176,8 +166,10 @@ final class ExpenseInvoiceItemRepository implements InvoiceItemRepositoryInterfa
             ) {
                 continue;
             }
+
             $items[] = new ExpenseInvoiceItem($expense);
         }
+
         return $items;
     }
 

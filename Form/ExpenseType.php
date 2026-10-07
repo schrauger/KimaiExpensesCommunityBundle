@@ -7,18 +7,15 @@ namespace KimaiPlugin\KimaiExpensesCommunityBundle\Form;
 use App\Entity\Activity;
 use App\Entity\Customer;
 use App\Entity\Project;
+use App\Form\Type\DateTimePickerType;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\Expense;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\ExpenseCategory;
-use KimaiPlugin\KimaiExpensesCommunityBundle\Form\TrimmedDecimalType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\CallbackTransformer;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
-//use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
-use App\Form\Type\DateTimePickerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 final class ExpenseType extends AbstractType
@@ -26,7 +23,10 @@ final class ExpenseType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $canEditCost = (bool) $options['can_edit_cost'];
+        $canEditExport = (bool) $options['can_edit_export'];
         $timezone = (string) $options['timezone'];
+        $userTimezone = new \DateTimeZone($timezone);
+        $utc = new \DateTimeZone('UTC');
 
         // NOTE: Symfony submits fields in the order they are added here, not in
         // the order they appear on screen. Expense::setCategory() copies the
@@ -75,10 +75,16 @@ final class ExpenseType extends AbstractType
             ->add('quantity', TrimmedDecimalType::class, [
                 'label' => 'Quantity',
             ])
+            // Kimai's DateTimePickerType passes model_timezone/view_timezone on
+            // to its inner date and time fields as well. With two different
+            // timezones (UTC model, user view) the conversion is applied once by
+            // the parent and again by the date child, which pushed the date back
+            // a day for users west of UTC. Kimai's own forms use the same
+            // timezone for both, so do that here and convert UTC <-> user
+            // timezone in the model transformer below.
             ->add('date', DateTimePickerType::class, [
                 'label' => 'Date and time',
-//                'widget' => 'single_text',
-                'model_timezone' => 'UTC',
+                'model_timezone' => $timezone,
                 'view_timezone' => $timezone,
             ])
             ->add('billable', CheckboxType::class, [
@@ -96,7 +102,25 @@ final class ExpenseType extends AbstractType
                 // Disabled for normal users. The server also enforces the
                 // permission; disabling this field is only a UI convenience.
                 'disabled' => !$canEditCost,
+            ])
+            ->add('exported', CheckboxType::class, [
+                'required' => false,
+                'label' => 'Exported',
+                'help' => 'Untick to make this expense available for invoicing again.',
+                // A disabled field never changes the stored value.
+                'disabled' => !$canEditExport,
             ]);
+
+        // The entity stores the date as UTC. Hand the picker the same instant in
+        // the user's timezone, and convert back to UTC on submit.
+        $builder->get('date')->addModelTransformer(new CallbackTransformer(
+            static fn (?\DateTimeInterface $value): ?\DateTime => $value === null
+                ? null
+                : \DateTime::createFromInterface($value)->setTimezone($userTimezone),
+            static fn (?\DateTimeInterface $value): ?\DateTime => $value === null
+                ? null
+                : \DateTime::createFromInterface($value)->setTimezone($utc),
+        ));
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -104,10 +128,12 @@ final class ExpenseType extends AbstractType
         $resolver->setDefaults([
             'data_class' => Expense::class,
             'can_edit_cost' => false,
+            'can_edit_export' => false,
             'timezone' => date_default_timezone_get(),
         ]);
 
         $resolver->setAllowedTypes('can_edit_cost', 'bool');
+        $resolver->setAllowedTypes('can_edit_export', 'bool');
         $resolver->setAllowedTypes('timezone', 'string');
     }
 }
