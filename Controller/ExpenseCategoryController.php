@@ -10,13 +10,14 @@ use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\ExpenseCategory;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Form\ExpenseCategoryType;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseCategoryRepository;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseRepository;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Security\ExpensePermissions;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/expenses/categories')]
-#[IsGranted('manage_kimai_expenses_community_category')]
+#[IsGranted(ExpensePermissions::MANAGE_CATEGORY)]
 final class ExpenseCategoryController extends AbstractController
 {
     public function __construct(

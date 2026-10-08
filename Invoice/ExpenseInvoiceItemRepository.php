@@ -7,6 +7,7 @@ namespace KimaiPlugin\KimaiExpensesCommunityBundle\Invoice;
 use App\Entity\ExportableItem;
 use App\Invoice\InvoiceItemRepositoryInterface;
 use App\Repository\Query\InvoiceQuery;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\Expense;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseRepository;
@@ -50,13 +51,13 @@ final class ExpenseInvoiceItemRepository implements InvoiceItemRepositoryInterfa
         if ($query->getBegin() !== null) {
             $qb
                 ->andWhere('expense.date >= :expenseBegin')
-                ->setParameter('expenseBegin', $query->getBegin());
+                ->setParameter('expenseBegin', $this->toUtc($query->getBegin()), Types::DATETIME_IMMUTABLE);
         }
 
         if ($query->getEnd() !== null) {
             $qb
                 ->andWhere('expense.date <= :expenseEnd')
-                ->setParameter('expenseEnd', $query->getEnd());
+                ->setParameter('expenseEnd', $this->toUtc($query->getEnd()), Types::DATETIME_IMMUTABLE);
         }
 
         /*
@@ -171,6 +172,17 @@ final class ExpenseInvoiceItemRepository implements InvoiceItemRepositoryInterfa
         }
 
         return $items;
+    }
+
+    /**
+     * Expense dates are stored as UTC, but Kimai's invoice query carries the
+     * range in the user's timezone. Binding such a date as-is would compare local
+     * clock digits with UTC digits and drop expenses near the range edges (for
+     * example the last hours of the month), so convert to the same instant in UTC.
+     */
+    private function toUtc(\DateTimeInterface $date): \DateTimeImmutable
+    {
+        return \DateTimeImmutable::createFromInterface($date)->setTimezone(new \DateTimeZone('UTC'));
     }
 
     /**

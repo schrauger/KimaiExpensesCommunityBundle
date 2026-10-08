@@ -15,7 +15,11 @@
 </div>
 
 <div class="row">
-    <div class="col-md-6">{{ form_row(form.category) }}</div>
+    <div class="col-md-6">
+        {{ form_row(form.category) }}
+        {# Filled in by the form script from the chosen category's help text. #}
+        <div class="form-hint text-secondary mb-3 d-none" data-expense-help></div>
+    </div>
     <div class="col-md-6">{{ form_row(form.quantity) }}</div>
 </div>
 

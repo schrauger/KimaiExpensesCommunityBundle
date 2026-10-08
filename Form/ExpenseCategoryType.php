@@ -30,18 +30,26 @@ final class ExpenseCategoryType extends AbstractType
                 'scale' => 4,
                 'html5' => true,
             ])
+            ->add('color', TextType::class, [
+                'required' => false,
+                'label' => 'Color',
+                'help' => 'Optional hex colour, e.g. #3b82f6. Shown as a dot next to the category in lists.',
+                'attr' => ['placeholder' => '#3b82f6', 'maxlength' => 7],
+            ])
             ->add('visible', CheckboxType::class, [
                 'required' => false,
                 'label' => 'Visible to users',
+                'help' => 'Hide a category instead of deleting it once expenses use it.',
             ])
             ->add('helpText', TextareaType::class, [
                 'required' => false,
                 'label' => 'Help text',
-                'help' => 'Displayed when creating an expense.',
+                'help' => 'Shown under the category field when someone enters an expense.',
             ])
             ->add('description', TextareaType::class, [
                 'required' => false,
                 'label' => 'Description',
+                'help' => 'Copied into the expense description when this category is chosen (only if that is still empty).',
             ]);
     }
 

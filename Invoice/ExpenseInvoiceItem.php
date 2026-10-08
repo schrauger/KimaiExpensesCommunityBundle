@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace KimaiPlugin\KimaiExpensesCommunityBundle\Invoice;
 
 use App\Entity\Activity;
+use App\Entity\ExportableItem;
 use App\Entity\MetaTableTypeInterface;
 use App\Entity\Project;
 use App\Entity\User;
-use App\Entity\ExportableItem;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\Expense;
@@ -101,15 +101,20 @@ final class ExpenseInvoiceItem implements ExportableItem
      *
      * Kimai's invoice merger expects both begin and end to be available, so
      * both are represented by the expense date.
+     *
+     * Kimai's templates print a date using the timezone carried by the object
+     * (timesheets carry their owner's timezone), so the date is converted from
+     * UTC to the expense owner's timezone here. Otherwise an expense entered at
+     * 9 pm in New York would show up on the next day's invoice line.
      */
     public function getBegin(): ?\DateTime
     {
-        return \DateTime::createFromInterface($this->expense->getDate());
+        return $this->localDate();
     }
 
     public function getEnd(): ?\DateTime
     {
-        return \DateTime::createFromInterface($this->expense->getDate());
+        return $this->localDate();
     }
 
     public function getDuration(): ?int
@@ -147,10 +152,8 @@ final class ExpenseInvoiceItem implements ExportableItem
     }
 
     /**
-     * Custom fields are not implemented in Phase 2 yet.
-     *
-     * Returning an empty collection keeps the adapter compatible with
-     * Kimai's ExportableItem contract and leaves room for Phase 3.
+     * Custom fields are not supported yet. Returning null keeps the adapter
+     * compatible with Kimai's ExportableItem contract.
      */
     public function getMetaField(string $name): ?MetaTableTypeInterface
     {
@@ -174,12 +177,18 @@ final class ExpenseInvoiceItem implements ExportableItem
     }
 
     /**
-     * Phase 2 expenses do not support tags yet.
+     * Expenses do not support tags yet.
      *
      * @return string[]
      */
     public function getTagsAsArray(): array
     {
         return [];
+    }
+
+    private function localDate(): \DateTime
+    {
+        return \DateTime::createFromInterface($this->expense->getDate())
+            ->setTimezone(new \DateTimeZone($this->expense->getUser()->getTimezone()));
     }
 }

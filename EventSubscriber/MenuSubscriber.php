@@ -6,6 +6,7 @@ namespace KimaiPlugin\KimaiExpensesCommunityBundle\EventSubscriber;
 
 use App\Event\ConfigureMainMenuEvent;
 use App\Utils\MenuItemModel;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Security\ExpensePermissions;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\Security\Core\Authorization\AuthorizationCheckerInterface;
 
@@ -36,7 +37,7 @@ final class MenuSubscriber implements EventSubscriberInterface
 
     public function onMenuConfigure(ConfigureMainMenuEvent $event): void
     {
-        if (!$this->security->isGranted('view_kimai_expenses_community')) {
+        if (!$this->security->isGranted(ExpensePermissions::VIEW)) {
             return;
         }
 
@@ -59,7 +60,7 @@ final class MenuSubscriber implements EventSubscriberInterface
         $this->setChildRoutes($my, ['kimai_expenses_community_create', 'kimai_expenses_community_edit']);
         $expenses->addChild($my);
 
-        if ($this->security->isGranted('view_other_timesheet')) {
+        if ($this->security->isGranted(ExpensePermissions::VIEW_OTHER)) {
             $expenses->addChild(new MenuItemModel(
                 'kimai_expenses_community_all',
                 'All expenses',
@@ -69,7 +70,7 @@ final class MenuSubscriber implements EventSubscriberInterface
             ));
         }
 
-        if ($this->security->isGranted('manage_kimai_expenses_community_category')) {
+        if ($this->security->isGranted(ExpensePermissions::MANAGE_CATEGORY)) {
             $categories = new MenuItemModel(
                 'kimai_expenses_community_category',
                 'Categories',

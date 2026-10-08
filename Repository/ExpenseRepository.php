@@ -7,11 +7,15 @@ namespace KimaiPlugin\KimaiExpensesCommunityBundle\Repository;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\Expense;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Entity\ExpenseCategory;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Query\ExpenseQuery;
 
+/**
+ * @extends ServiceEntityRepository<Expense>
+ */
 final class ExpenseRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -20,21 +24,81 @@ final class ExpenseRepository extends ServiceEntityRepository
     }
 
     /**
-     * Expenses matching the overview filters, newest first.
-     *
-     * The From/To filters are calendar dates in the user's timezone. Expense
-     * dates are stored as UTC, so each boundary is converted to the UTC
-     * instant at which that local day starts. The end date is inclusive
-     * (implemented as "< start of the following local day").
+     * Every expense matching the filters, newest first (used for the CSV export).
      *
      * @return Expense[]
      */
     public function findByQuery(ExpenseQuery $query, \DateTimeZone $userTimezone): array
     {
+        $qb = $this->baseQueryBuilder();
+        $this->applyFilters($qb, $query, $userTimezone);
+        $this->applyDefaultOrder($qb);
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * One page of matching expenses, newest first. count($paginator) is the
+     * number of ALL matching rows, not just this page.
+     *
+     * @return Paginator<Expense>
+     */
+    public function paginate(ExpenseQuery $query, \DateTimeZone $userTimezone, int $page, int $perPage): Paginator
+    {
+        $qb = $this->baseQueryBuilder();
+        $this->applyFilters($qb, $query, $userTimezone);
+        $this->applyDefaultOrder($qb);
+        $qb->setFirstResult(max(0, ($page - 1) * $perPage))->setMaxResults($perPage);
+
+        // Only to-one joins, so there is no need for the slower collection-aware mode.
+        return new Paginator($qb->getQuery(), false);
+    }
+
+    /**
+     * Sum of quantity x cost over ALL matching expenses (not only one page).
+     */
+    public function sumTotal(ExpenseQuery $query, \DateTimeZone $userTimezone): float
+    {
+        $qb = $this->baseQueryBuilder();
+        $this->applyFilters($qb, $query, $userTimezone);
+        // select() replaces the entity selects added by baseQueryBuilder().
+        $qb->select('COALESCE(SUM(expense.quantity * expense.cost), 0)');
+
+        return (float) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    public function countByCategory(ExpenseCategory $category): int
+    {
+        return (int) $this->createQueryBuilder('expense')
+            ->select('COUNT(expense.id)')
+            ->andWhere('expense.category = :category')
+            ->setParameter('category', $category)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Create the base query used when retrieving expenses for invoices.
+     *
+     * Keeping this in the repository gives us one place to evolve the query
+     * when we add more invoice filters later.
+     */
+    public function createInvoiceQueryBuilder(): QueryBuilder
+    {
+        return $this->baseQueryBuilder();
+    }
+
+    /**
+     * Apply the overview filters.
+     *
+     * The From/To filters are calendar dates in the user's timezone. Expense
+     * dates are stored as UTC, so each boundary is converted to the UTC instant
+     * at which that local day starts. The end date is inclusive (implemented as
+     * "< start of the following local day").
+     */
+    private function applyFilters(QueryBuilder $qb, ExpenseQuery $query, \DateTimeZone $userTimezone): void
+    {
         $utc = new \DateTimeZone('UTC');
-        $qb = $this->baseQueryBuilder()
-            ->orderBy('expense.date', 'DESC')
-            ->addOrderBy('expense.id', 'DESC');
 
         if ($query->getBegin() !== null) {
             $begin = (new \DateTimeImmutable($query->getBegin()->format('Y-m-d') . ' 00:00:00', $userTimezone))
@@ -91,35 +155,17 @@ final class ExpenseRepository extends ServiceEntityRepository
                 'category.name LIKE :term'
             ))->setParameter('term', '%' . addcslashes($query->getSearchTerm(), '%_\\') . '%');
         }
-
-        return $qb->getQuery()->getResult();
     }
 
-    public function countByCategory(ExpenseCategory $category): int
+    private function applyDefaultOrder(QueryBuilder $qb): void
     {
-        return (int) $this->createQueryBuilder('expense')
-            ->select('COUNT(expense.id)')
-            ->andWhere('expense.category = :category')
-            ->setParameter('category', $category)
-            ->getQuery()
-            ->getSingleScalarResult();
-    }
-
-    /**
-     * Create the base query used when retrieving expenses for invoices.
-     *
-     * Keeping this in the repository gives us one place to evolve the query
-     * when we add receipt fields, custom fields, or more invoice filters later.
-     */
-    public function createInvoiceQueryBuilder(): QueryBuilder
-    {
-        return $this->baseQueryBuilder();
+        $qb->orderBy('expense.date', 'DESC')->addOrderBy('expense.id', 'DESC');
     }
 
     /**
      * Expense with all related entities joined and selected. The aliases
      * (category, expenseUser, customer, project, activity) are relied on by
-     * the invoice repository, so do not rename them.
+     * the invoice repository and by applyFilters(), so do not rename them.
      */
     private function baseQueryBuilder(): QueryBuilder
     {

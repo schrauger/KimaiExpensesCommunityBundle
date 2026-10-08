@@ -9,6 +9,12 @@ use Doctrine\ORM\Mapping as ORM;
 use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseCategoryRepository;
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * A price list entry for expenses: a unit (mile, night, item ...) and a default
+ * cost per unit. This is deliberately separate from Kimai's Activity, which
+ * describes WORK and has hourly/fixed rates; a category describes a PURCHASE or
+ * allowance with a per-unit price, help text and a default description.
+ */
 #[ORM\Entity(repositoryClass: ExpenseCategoryRepository::class)]
 #[ORM\Table(name: 'kimai2_kimai_expenses_community_category')]
 class ExpenseCategory
@@ -32,14 +38,22 @@ class ExpenseCategory
     #[Assert\GreaterThanOrEqual(0)]
     private string $defaultCost = '1.0000';
 
+    /** Hidden categories stay on old expenses but cannot be chosen for new ones. */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
     private bool $visible = true;
 
+    /** Shown under the category field while an expense is being entered. */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $helpText = null;
 
+    /** Copied into an empty expense description when the category is chosen. */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
+
+    /** Optional "#rrggbb" colour, shown as a dot next to the name in lists. */
+    #[ORM\Column(length: 7, nullable: true)]
+    #[Assert\Regex(pattern: '/^#[0-9a-fA-F]{6}$/', message: 'Use a hex colour such as #3b82f6.')]
+    private ?string $color = null;
 
     public function getId(): ?int
     {
@@ -54,6 +68,7 @@ class ExpenseCategory
     public function setName(string $name): self
     {
         $this->name = trim($name);
+
         return $this;
     }
 
@@ -65,6 +80,7 @@ class ExpenseCategory
     public function setUnit(string $unit): self
     {
         $this->unit = trim($unit);
+
         return $this;
     }
 
@@ -76,6 +92,7 @@ class ExpenseCategory
     public function setDefaultCost(string|float|int $cost): self
     {
         $this->defaultCost = number_format((float) $cost, 4, '.', '');
+
         return $this;
     }
 
@@ -87,6 +104,7 @@ class ExpenseCategory
     public function setVisible(bool $visible): self
     {
         $this->visible = $visible;
+
         return $this;
     }
 
@@ -98,6 +116,7 @@ class ExpenseCategory
     public function setHelpText(?string $helpText): self
     {
         $this->helpText = $helpText;
+
         return $this;
     }
 
@@ -109,6 +128,20 @@ class ExpenseCategory
     public function setDescription(?string $description): self
     {
         $this->description = $description;
+
+        return $this;
+    }
+
+    public function getColor(): ?string
+    {
+        return $this->color;
+    }
+
+    public function setColor(?string $color): self
+    {
+        $color = $color !== null ? trim($color) : null;
+        $this->color = $color === '' ? null : $color;
+
         return $this;
     }
 

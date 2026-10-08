@@ -63,7 +63,13 @@ final class ExpenseType extends AbstractType
                 // Add the default rate to each option so the small bit of
                 // client-side code can update the displayed rate immediately.
                 'choice_attr' => static function (ExpenseCategory $category): array {
-                    return ['data-default-cost' => $category->getDefaultCost()];
+                    return [
+                        'data-default-cost' => $category->getDefaultCost(),
+                        // Used by the form script: help text under the field, and a
+                        // default description for an empty description box.
+                        'data-help' => (string) $category->getHelpText(),
+                        'data-description' => (string) $category->getDescription(),
+                    ];
                 },
                 'query_builder' => static function ($repository) {
                     return $repository->createQueryBuilder('category')

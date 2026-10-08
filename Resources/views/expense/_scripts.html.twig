@@ -103,6 +103,9 @@
         const extended = form.querySelector('[data-expense-extended]');
         const extendedToggle = form.querySelector('[data-expense-toggle]');
         const canEditCost = !!cost && !cost.disabled;
+        const description = pick(form, 'description');
+        const help = form.querySelector('[data-expense-help]');
+        let autoDescription = '';
 
         linkCustomerAndProject(customer, project, true);
 
@@ -118,6 +121,24 @@
             const rate = option ? option.dataset.defaultCost : null;
             if (rate !== null && rate !== undefined && rate !== '') {
                 cost.value = formatDecimal(rate, 2);
+            }
+        }
+
+        // Show the category's help text and, when the description is still empty
+        // (or still holds the previous category's text), fill in its description.
+        function updateCategoryHints(fillDescription) {
+            const option = selectedCategory();
+            const helpText = option && option.dataset.help ? option.dataset.help : '';
+            if (help) {
+                help.textContent = helpText;
+                help.classList.toggle('d-none', helpText === '');
+            }
+            if (fillDescription && description && option) {
+                const text = option.dataset.description || '';
+                if (description.value.trim() === '' || description.value === autoDescription) {
+                    description.value = text;
+                    autoDescription = text;
+                }
             }
         }
 
@@ -151,6 +172,7 @@
             category.addEventListener('change', function () {
                 updateRateFromCategory();
                 updateTotal();
+                updateCategoryHints(true);
             });
         }
         if (quantity) {
@@ -158,6 +180,7 @@
         }
 
         updateTotal();
+        updateCategoryHints(false);
     }
 
     // ---- Filter toolbar ------------------------------------------------------

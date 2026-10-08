@@ -1,6 +1,13 @@
 {% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
 
 {% block expense_actions %}
+    {% if can_export %}
+        {# Same filters as the list, without paging. #}
+        <a class="btn btn-outline-secondary"
+           href="{{ path(list_route, app.request.query.all|merge({export: 'csv'})) }}">
+            <i class="fas fa-download"></i> CSV
+        </a>
+    {% endif %}
     {% if is_granted('create_kimai_expenses_community') %}
         {# "modal-ajax-form" is Kimai's own class: it opens the link in Kimai's modal. #}
         <a class="btn btn-primary modal-ajax-form" data-event="kimai.expenseUpdate"
@@ -76,7 +83,15 @@
                     {% endif %}
                     <td class="text-nowrap">{{ expense.date|date('Y-m-d H:i', timezone) }}</td>
                     <td>
+                        {% if expense.category.color %}
+                            <span class="badge me-1" style="background-color: {{ expense.category.color|e('html_attr') }}; width: .75rem; height: .75rem; padding: 0;"></span>
+                        {% endif %}
                         <strong>{{ expense.category.name }}</strong>
+                        {% if expense.hasReceipt %}
+                            <a href="{{ path('kimai_expenses_community_receipt_download', {id: expense.id}) }}"
+                               target="_blank" rel="noopener" class="ms-1 text-secondary"
+                               title="{{ expense.receiptOriginalName }}"><i class="fas fa-paperclip"></i></a>
+                        {% endif %}
                         {% if expense.description %}
                             <div class="text-secondary small">{{ expense.description }}</div>
                         {% endif %}
@@ -104,6 +119,8 @@
                         <td>{{ include('@KimaiExpensesCommunity/expense/_user.html.twig', {user: expense.user}) }}</td>
                     {% endif %}
                     <td class="text-end text-nowrap">
+                        <a class="btn btn-sm btn-outline-secondary"
+                           href="{{ path('kimai_expenses_community_receipt', {id: expense.id}) }}">Receipt</a>
                         {% if is_granted('edit_kimai_expenses_community') %}
                             <a class="btn btn-sm btn-outline-primary modal-ajax-form" data-event="kimai.expenseUpdate"
                                href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri}) }}">Edit</a>
@@ -134,5 +151,12 @@
             <button type="submit" form="expense-bulk" name="state" value="exported" class="btn btn-sm btn-outline-secondary">Mark as exported</button>
         </div>
     {% endif %}
+
+    {# Totals cover ALL matching expenses, not just this page. #}
+    <div class="card-footer d-flex align-items-center gap-3">
+        <span class="text-secondary">{{ total_count }} expense(s)</span>
+        <strong>Total: {{ sum_total|number_format(2, '.', ',') }}</strong>
+        {{ include('@KimaiExpensesCommunity/expense/_pagination.html.twig') }}
+    </div>
 </div>
 {% endblock %}

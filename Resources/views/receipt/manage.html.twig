@@ -1,0 +1,55 @@
+{# View, attach, replace or remove the receipt of one expense. #}
+{% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
+
+{% block expense_actions %}
+    <a class="btn btn-secondary" href="{{ path('kimai_expenses_community') }}">Back to expenses</a>
+{% endblock %}
+
+{% block expense_content %}
+<div class="card">
+    <div class="card-body">
+        <dl class="row mb-4">
+            <dt class="col-sm-3">Date</dt>
+            <dd class="col-sm-9">{{ expense.date|date('Y-m-d H:i', timezone) }}</dd>
+            <dt class="col-sm-3">Category</dt>
+            <dd class="col-sm-9">{{ expense.category.name }}</dd>
+            <dt class="col-sm-3">Total</dt>
+            <dd class="col-sm-9">{{ expense.total|number_format(2, '.', ',') }}</dd>
+            {% if expense.description %}
+                <dt class="col-sm-3">Description</dt>
+                <dd class="col-sm-9">{{ expense.description }}</dd>
+            {% endif %}
+        </dl>
+
+        <h3 class="card-title">Current receipt</h3>
+        {% if expense.hasReceipt %}
+            <p>
+                <i class="fas fa-paperclip"></i>
+                <a href="{{ path('kimai_expenses_community_receipt_download', {id: expense.id}) }}" target="_blank" rel="noopener">{{ expense.receiptOriginalName }}</a>
+                <span class="text-secondary">({{ expense.receiptMimeType }})</span>
+            </p>
+            {% if can_change %}
+                <form method="post" action="{{ path('kimai_expenses_community_receipt_remove', {id: expense.id}) }}"
+                      onsubmit="return confirm('Remove this receipt?');" class="mb-4">
+                    <input type="hidden" name="_token" value="{{ csrf_token('remove-receipt-' ~ expense.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove receipt</button>
+                </form>
+            {% endif %}
+        {% else %}
+            <p class="text-secondary">No receipt attached.</p>
+        {% endif %}
+
+        {% if form %}
+            <h3 class="card-title mt-3">{{ expense.hasReceipt ? 'Replace receipt' : 'Attach a receipt' }}</h3>
+            {{ form_start(form) }}
+            {{ form_row(form.receipt) }}
+            <button type="submit" class="btn btn-primary">Upload</button>
+            {{ form_end(form) }}
+        {% else %}
+            <div class="alert alert-info mb-0">
+                This expense is locked (already exported, or you may not edit it), so its receipt cannot be changed.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace KimaiPlugin\KimaiExpensesCommunityBundle\DependencyInjection;
 
 use App\Plugin\AbstractPluginExtension;
+use KimaiPlugin\KimaiExpensesCommunityBundle\Security\ExpensePermissions;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
@@ -32,17 +33,7 @@ final class KimaiExpensesCommunityExtension extends AbstractPluginExtension impl
         $container->prependExtensionConfig('kimai', [
             'permissions' => [
                 'roles' => [
-                    'ROLE_SUPER_ADMIN' => [
-                        'view_kimai_expenses_community',
-                        'create_kimai_expenses_community',
-                        'edit_kimai_expenses_community',
-                        'delete_kimai_expenses_community',
-                        'edit_kimai_expenses_community_cost',
-                        'manage_kimai_expenses_community_category',
-                        'edit_exported_kimai_expenses_community',
-                        // Set the export state (like edit_export_own_timesheet).
-                        'edit_export_kimai_expenses_community',
-                    ],
+                    'ROLE_SUPER_ADMIN' => ExpensePermissions::all(),
                 ],
             ],
         ]);
