@@ -1,26 +1,18 @@
+{# Shared page frame. Kimai's base.html.twig supplies the header, menu, toasts and modal host. #}
 {% extends 'base.html.twig' %}
 
 {% block page_title %}{{ title|default('Expenses') }}{% endblock %}
 
+{# Shown at the right of the page header (Create / Export). Pages fill "expense_actions". #}
+{% block page_actions %}
+    <div class="btn-list">{% block expense_actions %}{% endblock %}</div>
+{% endblock %}
+
+{# Shown below the page title (column chooser, filter and search). Pages fill "expense_toolbar". #}
+{% block table_actions %}{% block expense_toolbar %}{% endblock %}{% endblock %}
+
+{# Flash messages are NOT printed here: Kimai's base template already turns them into toasts. #}
 {% block main %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>{{ title|default('Expenses') }}</h1>
-        <div class="btn-list">
-            {% block expense_actions %}{% endblock %}
-        </div>
-    </div>
-
-    {% for message in app.flashes('success') %}
-        <div class="alert alert-success">{{ message }}</div>
-    {% endfor %}
-
-    {% for message in app.flashes('danger') %}
-        <div class="alert alert-danger">{{ message }}</div>
-    {% endfor %}
-
     {% block expense_content %}{% endblock %}
-</div>
-
-{{ include('@KimaiExpensesCommunity/expense/_scripts.html.twig') }}
+    {{ include('@KimaiExpensesCommunity/expense/_scripts.html.twig') }}
 {% endblock %}

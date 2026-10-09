@@ -1,31 +1,21 @@
 {# Fields shared by the full-page form and the modal. Expects `form`. #}
+{# Rows are NOT wrapped in grid columns: Kimai's form theme lays each row out with the label on the left. #}
 {# Keep Extended settings open if one of its fields has a validation error. #}
-{% set extendedHasErrors = form.cost.vars.errors|length > 0 or form.exported.vars.errors|length > 0 %}
+{% set extendedHasErrors = form.cost.vars.errors|length > 0 or form.billable.vars.errors|length > 0 or form.exported.vars.errors|length > 0 %}
 
 {{ form_errors(form) }}
 
-<div class="row">
-    <div class="col-12">{{ form_row(form.date) }}</div>
-</div>
-
-<div class="row">
-    <div class="col-md-4">{{ form_row(form.customer) }}</div>
-    <div class="col-md-4">{{ form_row(form.project) }}</div>
-    <div class="col-md-4">{{ form_row(form.activity) }}</div>
-</div>
-
-<div class="row">
-    <div class="col-md-6">
-        {{ form_row(form.category) }}
-        {# Filled in by the form script from the chosen category's help text. #}
-        <div class="form-hint text-secondary mb-3 d-none" data-expense-help></div>
-    </div>
-    <div class="col-md-6">{{ form_row(form.quantity) }}</div>
-</div>
-
-{{ form_row(form.billable) }}
+{{ form_row(form.date) }}
+{{ form_row(form.customer) }}
+{{ form_row(form.project) }}
+{{ form_row(form.activity) }}
+{{ form_row(form.category) }}
+{# Filled in by the form script from the chosen category's help text. #}
+<div class="form-hint text-secondary small mb-3 d-none" data-expense-help></div>
+{{ form_row(form.quantity) }}
 {{ form_row(form.description) }}
 
+{# By default an expense is billable, not exported, and priced by its category, so these stay tucked away. #}
 <div class="accordion mt-3" id="expense-extended-accordion">
     <div class="accordion-item">
         <h2 class="accordion-header" id="expense-extended-heading">
@@ -41,6 +31,7 @@
              aria-labelledby="expense-extended-heading">
             <div class="accordion-body">
                 {{ form_row(form.cost) }}
+                {{ form_row(form.billable) }}
                 {{ form_row(form.exported) }}
             </div>
         </div>

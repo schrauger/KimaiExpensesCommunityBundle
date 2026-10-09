@@ -1,162 +1,181 @@
+{# Expense overview (My expenses / All expenses), laid out like Kimai's time-tracking lists. #}
 {% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
+{% import "macros/datatables.html.twig" as tables %}
 
+{# Column chooser, filter dropdown and search box (same markup as Kimai's own toolbar). #}
+{% block expense_toolbar %}
+    {% form_theme toolbar 'form/search.html.twig' %}
+    <div class="btn-list">
+        {{ tables.datatable_column_modal_link(table_name) }}
+        {{ form_start(toolbar, {attr: {class: 'searchform', 'data-expense-toolbar': ''}}) }}
+            {% set searchTerm = form_widget(toolbar.searchTerm) %}
+            <div class="input-group inline-search position-static">
+                <button type="button" class="btn dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="false"
+                        aria-haspopup="true" aria-expanded="false" id="search-dropdown-btn" title="{{ 'search_filter'|trans }}">
+                    {{ icon('filter', true) }}
+                    {% if filter_count > 0 %}
+                        <span class="badge badge-notification bg-primary text-primary-fg ms-1 d-none d-sm-inline">{{ filter_count }}</span>
+                    {% endif %}
+                </button>
+                <div class="dropdown-menu p-3 search-dropdown" data-popper-placement="bottom-start" aria-labelledby="search-dropdown-btn">
+                    {{ form_rest(toolbar) }}
+                    <div class="row mt-3">
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-primary">{{ 'search'|trans }}</button>
+                        </div>
+                    </div>
+                </div>
+                {{ searchTerm|raw }}
+                <span class="input-group-text">
+                    <button type="submit" class="btn btn-icon btn-sm btn-ghost-secondary p-1" title="{{ 'search'|trans }}">{{ icon('search') }}</button>
+                    {% if filter_count > 0 %}
+                        <a class="btn btn-icon btn-sm btn-ghost-secondary p-1 text-orange" href="{{ reset_url }}" title="{{ 'reset'|trans }}">{{ icon('cancel') }}</a>
+                    {% endif %}
+                </span>
+            </div>
+        {{ form_end(toolbar, {render_rest: false}) }}
+    </div>
+{% endblock %}
+
+{# Create / Export, at the right of the page header. #}
 {% block expense_actions %}
-    {% if can_export %}
-        {# Same filters as the list, without paging. #}
-        <a class="btn btn-outline-secondary"
-           href="{{ path(list_route, app.request.query.all|merge({export: 'csv'})) }}">
-            <i class="fas fa-download"></i> CSV
-        </a>
-    {% endif %}
     {% if is_granted('create_kimai_expenses_community') %}
         {# "modal-ajax-form" is Kimai's own class: it opens the link in Kimai's modal. #}
-        <a class="btn btn-primary modal-ajax-form" data-event="kimai.expenseUpdate"
+        <a class="btn modal-ajax-form" data-event="kimai.expenseUpdate"
            href="{{ path('kimai_expenses_community_create', {returnUrl: app.request.requestUri}) }}">
-            <i class="fas fa-plus"></i> New expense
+            <i class="fas fa-plus"></i><span class="ms-1">Create</span>
         </a>
+    {% endif %}
+    {% if can_export %}
+        <div class="dropdown">
+            <a class="btn dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-download"></i><span class="ms-1">Export</span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end">
+                {# Same filters as the list, without paging. More formats can be added here later. #}
+                <a class="dropdown-item" href="{{ path(list_route, app.request.query.all|merge({export: 'csv'})) }}">CSV</a>
+            </div>
+        </div>
     {% endif %}
 {% endblock %}
 
 {% block expense_content %}
-{% set colspan = 10 + (show_user ? 1 : 0) + (can_change_export ? 1 : 0) %}
-
-<div class="card mb-3">
-    <div class="card-body">
-        {{ form_start(toolbar, {attr: {'data-expense-toolbar': '', 'class': 'row g-2 align-items-end'}}) }}
-            <div class="col-md-3">{{ form_row(toolbar.searchTerm) }}</div>
-            <div class="col-md-2">{{ form_row(toolbar.begin) }}</div>
-            <div class="col-md-2">{{ form_row(toolbar.end) }}</div>
-            {% if show_user %}
-                <div class="col-md-3">{{ form_row(toolbar.user) }}</div>
-            {% endif %}
-            <div class="col-md-3">{{ form_row(toolbar.customer) }}</div>
-            <div class="col-md-3">{{ form_row(toolbar.project) }}</div>
-            <div class="col-md-3">{{ form_row(toolbar.activity) }}</div>
-            <div class="col-md-3">{{ form_row(toolbar.category) }}</div>
-            <div class="col-md-2">{{ form_row(toolbar.billable) }}</div>
-            <div class="col-md-2">{{ form_row(toolbar.exported) }}</div>
-            <div class="col-auto mb-3">
-                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filter</button>
-                {% if app.request.query.count > 0 %}
-                    <a class="btn btn-link" href="{{ reset_url }}">Reset</a>
-                {% endif %}
-            </div>
-        {{ form_end(toolbar, {render_rest: false}) }}
-    </div>
-</div>
-
 {% if can_change_export %}
-    {# Table rows reference this form with the HTML "form" attribute, so the
-       delete forms in each row are not nested inside another form. #}
+    {# Rows and footer buttons reference this form with the HTML "form" attribute,
+       so the per-row delete forms are not nested inside another form. #}
     <form id="expense-bulk" method="post" action="{{ path('kimai_expenses_community_export_state') }}">
         <input type="hidden" name="_token" value="{{ csrf_token('expense-export-state') }}">
         <input type="hidden" name="returnUrl" value="{{ app.request.requestUri }}">
     </form>
 {% endif %}
 
-<div class="card">
-    <div class="table-responsive">
-        <table class="table table-vcenter table-hover card-table">
-            <thead>
-            <tr>
-                {% if can_change_export %}
-                    <th class="w-1"><input class="form-check-input" type="checkbox" data-expense-select-all aria-label="Select all"></th>
-                {% endif %}
-                <th>Date</th>
-                <th>Category</th>
-                <th>Customer</th>
-                <th>Project</th>
-                <th>Quantity</th>
-                <th>Cost</th>
-                <th>Total</th>
-                <th>Billable</th>
-                <th>Exported</th>
-                {% if show_user %}<th>User</th>{% endif %}
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for expense in expenses %}
-                <tr>
-                    {% if can_change_export %}
-                        <td><input class="form-check-input" type="checkbox" name="ids[]" value="{{ expense.id }}" form="expense-bulk" aria-label="Select expense"></td>
-                    {% endif %}
-                    <td class="text-nowrap">{{ expense.date|date('Y-m-d H:i', timezone) }}</td>
-                    <td>
-                        {% if expense.category.color %}
-                            <span class="badge me-1" style="background-color: {{ expense.category.color|e('html_attr') }}; width: .75rem; height: .75rem; padding: 0;"></span>
-                        {% endif %}
-                        <strong>{{ expense.category.name }}</strong>
-                        {% if expense.hasReceipt %}
-                            <a href="{{ path('kimai_expenses_community_receipt_download', {id: expense.id}) }}"
-                               target="_blank" rel="noopener" class="ms-1 text-secondary"
-                               title="{{ expense.receiptOriginalName }}"><i class="fas fa-paperclip"></i></a>
-                        {% endif %}
-                        {% if expense.description %}
-                            <div class="text-secondary small">{{ expense.description }}</div>
-                        {% endif %}
-                    </td>
-                    <td>{{ expense.customer ? expense.customer.name : '—' }}</td>
-                    <td>{{ expense.project ? expense.project.name : '—' }}</td>
-                    <td>{{ expense.quantity|number_format(4, '.', ',') }} {{ expense.category.unit }}</td>
-                    <td>{{ expense.cost|number_format(4, '.', ',') }}</td>
-                    <td><strong>{{ expense.total|number_format(2, '.', ',') }}</strong></td>
-                    <td>
-                        {% if expense.billable %}
-                            <span class="badge bg-green-lt">Yes</span>
-                        {% else %}
-                            <span class="badge bg-secondary-lt">No</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if expense.exported %}
-                            <span class="badge bg-blue-lt">Yes</span>
-                        {% else %}
-                            <span class="badge bg-secondary-lt">No</span>
-                        {% endif %}
-                    </td>
-                    {% if show_user %}
-                        <td>{{ include('@KimaiExpensesCommunity/expense/_user.html.twig', {user: expense.user}) }}</td>
-                    {% endif %}
-                    <td class="text-end text-nowrap">
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="{{ path('kimai_expenses_community_receipt', {id: expense.id}) }}">Receipt</a>
-                        {% if is_granted('edit_kimai_expenses_community') %}
-                            <a class="btn btn-sm btn-outline-primary modal-ajax-form" data-event="kimai.expenseUpdate"
-                               href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri}) }}">Edit</a>
-                        {% endif %}
-                        {% if is_granted('delete_kimai_expenses_community') %}
-                            <form method="post" action="{{ path('kimai_expenses_community_delete', {id: expense.id}) }}" class="d-inline"
-                                  onsubmit="return confirm('Delete this expense?');">
-                                <input type="hidden" name="_token" value="{{ csrf_token('delete-expense-' ~ expense.id) }}">
-                                <input type="hidden" name="returnUrl" value="{{ app.request.requestUri }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                            </form>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% else %}
-                <tr>
-                    <td colspan="{{ colspan }}" class="text-center py-5 text-muted">No expenses found.</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+{# Opens the card, table and <thead>. "reload" makes Kimai refresh the table after a modal save. #}
+{{ tables.datatable_header(table_name, columns, null, {'reload': 'kimai.expenseUpdate', 'contextMenuId': ''}) }}
 
+{% for expense in expenses %}
+    {% set canEdit = editable[expense.id] and is_granted('edit_kimai_expenses_community') %}
+    {% set local = date(expense.date, timezone) %}
+    {% set currency = expense.project ? expense.project.customer.currency : (expense.customer ? expense.customer.currency : null) %}
+    <tr{% if canEdit %} class="modal-ajax-form open-edit" data-event="kimai.expenseUpdate"
+        data-href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri}) }}"{% endif %}>
+        {% if can_change_export %}
+            <td class="w-1">
+                <input class="form-check-input m-0 align-middle" type="checkbox" name="ids[]" value="{{ expense.id }}" form="expense-bulk" aria-label="Select expense">
+            </td>
+        {% endif %}
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'date') }} text-nowrap">{{ local|date_time }}</td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'category') }}">
+            {{ include('@KimaiExpensesCommunity/expense/_dot.html.twig', {color: expense.category.color}) }}
+            <strong>{{ expense.category.name }}</strong>
+            {% if expense.hasReceipt %}
+                <a href="{{ path('kimai_expenses_community_receipt_download', {id: expense.id}) }}"
+                   target="_blank" rel="noopener" class="ms-1 text-secondary" title="{{ expense.receiptOriginalName }}"><i class="fas fa-paperclip"></i></a>
+            {% endif %}
+            {% if expense.description %}
+                <div class="text-secondary small">{{ expense.description }}</div>
+            {% endif %}
+        </td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'customer') }}">
+            {% if expense.customer %}
+                {{ include('@KimaiExpensesCommunity/expense/_dot.html.twig', {color: expense.customer.color}) }}{{ expense.customer.name }}
+            {% endif %}
+        </td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'project') }}">
+            {% if expense.project %}
+                {{ include('@KimaiExpensesCommunity/expense/_dot.html.twig', {color: expense.project.color}) }}{{ expense.project.name }}
+            {% endif %}
+        </td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'quantity') }} text-nowrap">
+            {{ expense.quantity + 0 }} {{ expense.category.unit }}
+        </td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'cost') }}">{{ expense.cost|number_format(4, '.', ',') }}</td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'total') }} text-nowrap">
+            <strong>{% if currency %}{{ expense.total|money(currency) }}{% else %}{{ expense.total|number_format(2, '.', ',') }}{% endif %}</strong>
+        </td>
+        {# Billable and exported are the defaults' opposite only when they matter, so they only show as badges then. #}
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'status') }}">
+            {% if not expense.billable %}<span class="badge bg-secondary-lt me-1">Not billable</span>{% endif %}
+            {% if expense.exported %}<span class="badge bg-blue-lt"><i class="fas fa-lock me-1"></i>Exported</span>{% endif %}
+        </td>
+        {% if show_user %}
+            <td class="{{ tables.data_table_column_class(table_name, columns, 'user') }}">
+                {{ include('@KimaiExpensesCommunity/expense/_user.html.twig', {user: expense.user}) }}
+            </td>
+        {% endif %}
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'actions') }}">
+            <div class="dropdown">
+                <a class="btn btn-icon btn-sm btn-ghost-secondary" href="#" data-bs-toggle="dropdown"
+                   data-bs-boundary="viewport" aria-expanded="false" aria-label="Actions"><i class="fas fa-ellipsis"></i></a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    {% if canEdit %}
+                        <a class="dropdown-item modal-ajax-form" data-event="kimai.expenseUpdate"
+                           href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri}) }}">Edit</a>
+                    {% endif %}
+                    {% if is_granted('create_kimai_expenses_community') %}
+                        <a class="dropdown-item modal-ajax-form" data-event="kimai.expenseUpdate"
+                           href="{{ path('kimai_expenses_community_duplicate', {id: expense.id, returnUrl: app.request.requestUri}) }}">Create copy</a>
+                    {% endif %}
+                    <a class="dropdown-item" href="{{ path('kimai_expenses_community_receipt', {id: expense.id}) }}">Receipt</a>
+                    {% if editable[expense.id] and is_granted('delete_kimai_expenses_community') %}
+                        <div class="dropdown-divider"></div>
+                        <form method="post" action="{{ path('kimai_expenses_community_delete', {id: expense.id}) }}"
+                              onsubmit="return confirm('Delete this expense?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete-expense-' ~ expense.id) }}">
+                            <input type="hidden" name="returnUrl" value="{{ app.request.requestUri }}">
+                            <button type="submit" class="dropdown-item text-danger">Delete</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </td>
+    </tr>
+{% else %}
+    <tr>
+        <td colspan="{{ columns|length }}" class="text-center py-5 text-muted">No expenses found.</td>
+    </tr>
+{% endfor %}
+
+{# Closes <tbody>, the table and its wrappers, then adds the card footer (like Kimai's table footer). #}
+</tbody></table></div></div>
+{% set first = total_count > 0 ? (page - 1) * per_page + 1 : 0 %}
+{% set last = first > 0 ? first + expenses|length - 1 : 0 %}
+<div class="card-footer d-flex align-items-center gap-3">
     {% if can_change_export and expenses|length > 0 %}
-        <div class="card-footer d-flex align-items-center gap-2">
-            <span class="text-secondary">With selected:</span>
-            <button type="submit" form="expense-bulk" name="state" value="not_exported" class="btn btn-sm btn-outline-secondary">Mark as not exported</button>
-            <button type="submit" form="expense-bulk" name="state" value="exported" class="btn btn-sm btn-outline-secondary">Mark as exported</button>
+        <div class="d-flex align-items-center gap-2">
+            <span class="text-body-secondary d-none d-md-inline">With selected:</span>
+            <button type="submit" form="expense-bulk" name="state" value="not_exported" class="btn btn-sm">Mark as not exported</button>
+            <button type="submit" form="expense-bulk" name="state" value="exported" class="btn btn-sm">Mark as exported</button>
         </div>
     {% endif %}
-
     {# Totals cover ALL matching expenses, not just this page. #}
-    <div class="card-footer d-flex align-items-center gap-3">
-        <span class="text-secondary">{{ total_count }} expense(s)</span>
-        <strong>Total: {{ sum_total|number_format(2, '.', ',') }}</strong>
-        {{ include('@KimaiExpensesCommunity/expense/_pagination.html.twig') }}
-    </div>
+    <p class="d-none d-sm-block m-0 text-body-secondary">
+        {{ 'pagination'|trans({'%start%': first, '%end%': last, '%total%': total_count}) }}
+        <span class="ms-2">· Total: <strong>{{ sum_total|number_format(2, '.', ',') }}</strong></span>
+    </p>
+    {{ include('@KimaiExpensesCommunity/expense/_pagination.html.twig') }}
 </div>
+</div>
+
+{# The dialog behind the column chooser button. #}
+{{ tables.data_table_column_modal(table_name, columns) }}
 {% endblock %}

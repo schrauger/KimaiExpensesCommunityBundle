@@ -1,16 +1,11 @@
 {# Fields shared by the full-page category form and the modal. Expects `form`. #}
+{# Rows are NOT wrapped in grid columns: Kimai's form theme lays each row out with the label on the left. #}
 {{ form_errors(form) }}
 
-<div class="row">
-    <div class="col-md-6">{{ form_row(form.name) }}</div>
-    <div class="col-md-3">{{ form_row(form.unit) }}</div>
-    <div class="col-md-3">{{ form_row(form.defaultCost) }}</div>
-</div>
-
-<div class="row">
-    <div class="col-md-4">{{ form_row(form.color) }}</div>
-</div>
-
-{{ form_row(form.visible) }}
+{{ form_row(form.name) }}
+{{ form_row(form.unit) }}
+{{ form_row(form.defaultCost) }}
+{{ form_row(form.color) }}
 {{ form_row(form.helpText) }}
 {{ form_row(form.description) }}
+{{ form_row(form.visible) }}

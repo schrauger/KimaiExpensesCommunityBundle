@@ -131,4 +131,22 @@ final class ExpenseQuery
         $searchTerm = $searchTerm !== null ? trim($searchTerm) : null;
         $this->searchTerm = $searchTerm === '' ? null : $searchTerm;
     }
+
+    /**
+     * Number of active filters, shown as a badge on the filter button.
+     * The user filter only counts where the user can choose it ("All expenses").
+     */
+    public function countFilter(bool $includeUser = false): int
+    {
+        $filters = [
+            $this->begin, $this->end, $this->customer, $this->project, $this->activity,
+            $this->category, $this->billable, $this->exported, $this->searchTerm,
+        ];
+
+        if ($includeUser) {
+            $filters[] = $this->user;
+        }
+
+        return \count(array_filter($filters, static fn ($value): bool => $value !== null));
+    }
 }

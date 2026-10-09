@@ -8,8 +8,8 @@
         {{ include('@KimaiExpensesCommunity/category/_form_fields.html.twig') }}
     {% endblock %}
     {% block modal_footer %}
-        <button type="submit" class="btn btn-primary modal-form-save" id="{{ block('modal_id') }}_save">Save category</button>
-        <button type="button" class="btn btn-cancel" data-bs-dismiss="modal">{{ 'action.close'|trans }}</button>
+        <button type="submit" class="btn btn-primary modal-form-save" id="{{ block('modal_id') }}_save">{{ 'action.save'|trans }}</button>
+        <button type="button" class="btn" data-bs-dismiss="modal">{{ 'action.close'|trans }}</button>
     {% endblock %}
     {% block modal_end %}{{ form_end(form) }}{% endblock %}
 {% endembed %}

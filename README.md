@@ -9,7 +9,7 @@ This is an independent implementation based on Kimai's public plugin APIs and do
 - **Categories** with a unit (mile, night, item ...), a default cost per unit, an optional colour, help text, and a default description
 - **quantity × cost** totals; negative quantities are allowed for credits and corrections
 - Date and time, user, customer / project / activity, description, billable flag
-- **Kimai-style UI:** modal create/edit, filter toolbar, pagination, totals for the whole filtered list
+- **Native Kimai look:** the list uses Kimai's own datatable markup (column chooser, filter dropdown, row click to edit, ⋯ menu with Edit / Create copy / Receipt / Delete), Kimai's customer/project/activity pickers, and Kimai's modal; pagination and totals cover the whole filtered list
 - **My expenses** and **All expenses** (the latter needs `view_other_timesheet`)
 - **Invoices:** billable, not-yet-exported expenses appear in Kimai's invoice screen and are marked exported when the invoice is created
 - **Export state:** an "Exported" checkbox in the edit form and bulk "Mark as (not) exported" in the list; exported records are locked like Kimai timesheets

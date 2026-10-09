@@ -64,7 +64,7 @@ final class ExpenseReceiptController extends AbstractController
 
                     $this->addFlash('success', 'Receipt saved.');
                 } catch (\Throwable) {
-                    $this->addFlash('danger', 'The receipt could not be saved. Check the file type and the folder permissions of var/data.');
+                    $this->addFlash('error', 'The receipt could not be saved. Check the file type and the folder permissions of var/data.');
                 }
 
                 return $this->redirectToRoute('kimai_expenses_community_receipt', ['id' => $expense->getId()]);

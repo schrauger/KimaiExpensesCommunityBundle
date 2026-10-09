@@ -44,6 +44,13 @@
             return;
         }
 
+        // Kimai's own customer/project/activity pickers load their options through
+        // the API and already select a lone project. Only plain selects need this.
+        if (project.hasAttribute('data-option-pattern') || project.hasAttribute('data-related-select')
+            || customer.hasAttribute('data-related-select')) {
+            return;
+        }
+
         const all = Array.from(project.options);
         const placeholder = all.find(function (o) { return o.value === ''; }) || null;
 

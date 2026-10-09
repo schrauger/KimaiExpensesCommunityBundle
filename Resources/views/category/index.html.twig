@@ -1,62 +1,70 @@
+{# Expense categories, laid out like Kimai's other admin lists. #}
 {% extends '@KimaiExpensesCommunity/expense/base.html.twig' %}
+{% import "macros/datatables.html.twig" as tables %}
 
 {% block expense_actions %}
-    <a class="btn btn-primary modal-ajax-form" data-event="kimai.expenseUpdate"
+    <a class="btn modal-ajax-form" data-event="kimai.expenseUpdate"
        href="{{ path('kimai_expenses_community_category_create') }}">
-        <i class="fas fa-plus"></i> New category
+        <i class="fas fa-plus"></i><span class="ms-1">Create</span>
     </a>
 {% endblock %}
 
 {% block expense_content %}
-<div class="card">
-    <div class="table-responsive">
-        <table class="table table-vcenter table-hover card-table">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Unit</th>
-                <th>Default cost</th>
-                <th>Visible</th>
-                <th>Description</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for category in categories %}
-                <tr>
-                    <td>
-                        {% if category.color %}
-                            <span class="badge me-1" style="background-color: {{ category.color|e('html_attr') }}; width: .75rem; height: .75rem; padding: 0;"></span>
-                        {% endif %}
-                        <strong>{{ category.name }}</strong>
-                    </td>
-                    <td>{{ category.unit }}</td>
-                    <td>{{ category.defaultCost|number_format(4, '.', ',') }}</td>
-                    <td>
-                        {% if category.visible %}
-                            <span class="badge bg-green-lt">Yes</span>
-                        {% else %}
-                            <span class="badge bg-secondary-lt">No</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ category.description|default('—') }}</td>
-                    <td class="text-end text-nowrap">
-                        <a class="btn btn-sm btn-outline-primary modal-ajax-form" data-event="kimai.expenseUpdate"
-                           href="{{ path('kimai_expenses_community_category_edit', {id: category.id}) }}">Edit</a>
-                        <form method="post" action="{{ path('kimai_expenses_community_category_delete', {id: category.id}) }}" class="d-inline"
-                              onsubmit="return confirm('Delete this category?');">
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete-category-' ~ category.id) }}">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                        </form>
-                    </td>
-                </tr>
+{% set table_name = 'expenses_community_category' %}
+{# A plain string is the column's CSS class; an array can also carry a title (see ExpenseController::tableColumns). #}
+{% set columns = {
+    'name': 'alwaysVisible',
+    'unit': {'class': 'd-none d-sm-table-cell', 'title': 'Unit'},
+    'default_cost': {'class': 'text-end d-none d-sm-table-cell', 'title': 'Default cost'},
+    'description': 'd-none d-md-table-cell',
+    'visible': {'class': 'd-none d-md-table-cell', 'title': 'Visible'},
+    'actions': 'actions alwaysVisible',
+} %}
+
+{{ tables.datatable_header(table_name, columns, null, {'reload': 'kimai.expenseUpdate', 'contextMenuId': ''}) }}
+
+{% for category in categories %}
+    <tr class="modal-ajax-form open-edit" data-event="kimai.expenseUpdate"
+        data-href="{{ path('kimai_expenses_community_category_edit', {id: category.id}) }}">
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'name') }}">
+            {{ include('@KimaiExpensesCommunity/expense/_dot.html.twig', {color: category.color}) }}
+            <strong>{{ category.name }}</strong>
+        </td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'unit') }}">{{ category.unit }}</td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'default_cost') }}">{{ category.defaultCost|number_format(4, '.', ',') }}</td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'description') }}">{{ category.description|default('—') }}</td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'visible') }}">
+            {% if category.visible %}
+                <span class="badge bg-green-lt">Yes</span>
             {% else %}
-                <tr>
-                    <td colspan="6" class="text-center py-5 text-muted">No categories found.</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+                <span class="badge bg-secondary-lt">No</span>
+            {% endif %}
+        </td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'actions') }}">
+            <div class="dropdown">
+                <a class="btn btn-icon btn-sm btn-ghost-secondary" href="#" data-bs-toggle="dropdown"
+                   data-bs-boundary="viewport" aria-expanded="false" aria-label="Actions"><i class="fas fa-ellipsis"></i></a>
+                <div class="dropdown-menu dropdown-menu-end">
+                    <a class="dropdown-item modal-ajax-form" data-event="kimai.expenseUpdate"
+                       href="{{ path('kimai_expenses_community_category_edit', {id: category.id}) }}">Edit</a>
+                    <div class="dropdown-divider"></div>
+                    <form method="post" action="{{ path('kimai_expenses_community_category_delete', {id: category.id}) }}"
+                          onsubmit="return confirm('Delete this category?');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete-category-' ~ category.id) }}">
+                        <button type="submit" class="dropdown-item text-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </td>
+    </tr>
+{% else %}
+    <tr>
+        <td colspan="{{ columns|length }}" class="text-center py-5 text-muted">No categories found.</td>
+    </tr>
+{% endfor %}
+
+{# Closes <tbody>, the table, its wrappers and the card (like Kimai's table footer without paging). #}
+</tbody></table></div></div></div>
+
+{{ tables.data_table_column_modal(table_name, columns) }}
 {% endblock %}

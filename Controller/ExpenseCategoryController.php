@@ -58,7 +58,7 @@ final class ExpenseCategoryController extends AbstractController
         }
 
         if ($this->expenses->countByCategory($category) > 0) {
-            $this->addFlash('danger', 'This category cannot be deleted because expenses already use it. Hide it instead.');
+            $this->addFlash('error', 'This category cannot be deleted because expenses already use it. Hide it instead.');
             return $this->redirectToRoute('kimai_expenses_community_category');
         }
 

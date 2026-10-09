@@ -1,0 +1,2 @@
+{# A small coloured dot, like the ones next to customers, projects and activities in Kimai's lists. Expects `color` (may be empty). #}
+{% if color %}<span class="d-inline-block rounded-circle me-1 align-middle" style="width: .6rem; height: .6rem; background-color: {{ color|e('html_attr') }};"></span>{% endif %}

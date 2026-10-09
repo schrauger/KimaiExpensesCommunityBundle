@@ -22,9 +22,9 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Expense overview (My / All), create, edit, delete and the bulk export-state action.
+ * Expense overview (My / All), create, edit, copy, delete and the bulk export-state action.
  *
- * Create and edit behave like Kimai's own controllers so that Kimai's
+ * Create, edit and copy behave like Kimai's own controllers so that Kimai's
  * "modal-ajax-form" links work: AJAX requests get only the modal markup, a
  * valid submit redirects, and an invalid submit returns the form again (200).
  */
@@ -68,6 +68,28 @@ final class ExpenseController extends AbstractController
         $expense->setUser($this->getAuthenticatedUser());
 
         return $this->processForm($request, $expense, true);
+    }
+
+    /**
+     * "Create copy": opens the create form pre-filled from an existing expense.
+     * The form posts to the normal create route, so nothing else is needed.
+     */
+    #[Route('/{id}/duplicate', name: 'kimai_expenses_community_duplicate', requirements: ['id' => '\d+'], methods: ['GET'])]
+    #[IsGranted(ExpensePermissions::CREATE)]
+    public function duplicate(int $id, Request $request): Response
+    {
+        $source = $this->findExpense($id);
+
+        if (!$this->access->canView($source)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        return $this->processForm(
+            $request,
+            $source->duplicateFor($this->getAuthenticatedUser()),
+            true,
+            'Create copy'
+        );
     }
 
     #[Route('/{id}/edit', name: 'kimai_expenses_community_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
@@ -127,7 +149,7 @@ final class ExpenseController extends AbstractController
         $ids = array_values(array_filter(array_map('intval', $request->request->all('ids'))));
 
         if ($ids === []) {
-            $this->addFlash('danger', 'No expenses selected.');
+            $this->addFlash('error', 'No expenses selected.');
 
             return $this->redirect($returnUrl);
         }
@@ -158,7 +180,7 @@ final class ExpenseController extends AbstractController
         }
 
         if ($skipped > 0) {
-            $this->addFlash('danger', sprintf(
+            $this->addFlash('error', sprintf(
                 '%d expense(s) could not be changed (locked as exported, or owned by another user).',
                 $skipped
             ));
@@ -181,6 +203,9 @@ final class ExpenseController extends AbstractController
             'include_user' => $allUsers,
         ]);
         $toolbar->handleRequest($request);
+
+        // Counted before the owner is forced below, so "My expenses" shows no filter badge.
+        $filterCount = $query->countFilter($allUsers);
 
         if (!$allUsers) {
             // Applied after the toolbar is handled, so a crafted ?user=
@@ -209,29 +234,85 @@ final class ExpenseController extends AbstractController
             $paginator = $this->expenses->paginate($query, $timezone, $page, self::PER_PAGE);
         }
 
+        $rows = iterator_to_array($paginator, false);
+
+        // Per-row lock state, so locked rows are not offered Edit / Delete.
+        $editable = [];
+        foreach ($rows as $expense) {
+            $editable[$expense->getId()] = $this->access->canModify($expense);
+        }
+
         $listRoute = $allUsers ? 'kimai_expenses_community_all' : 'kimai_expenses_community';
+        $canChangeExport = $this->isGranted(ExpensePermissions::EDIT_EXPORT);
 
         return $this->render('@KimaiExpensesCommunity/expense/index.html.twig', [
-            'expenses' => iterator_to_array($paginator, false),
+            'expenses' => $rows,
+            'editable' => $editable,
             'toolbar' => $toolbar->createView(),
+            'filter_count' => $filterCount,
             'show_user' => $allUsers,
-            'can_change_export' => $this->isGranted(ExpensePermissions::EDIT_EXPORT),
+            'can_change_export' => $canChangeExport,
             'can_export' => $this->isGranted(ExpensePermissions::EXPORT),
+            'table_name' => $allUsers ? 'expenses_community_all' : 'expenses_community',
+            'columns' => $this->tableColumns($allUsers, $canChangeExport),
             'list_route' => $listRoute,
             'reset_url' => $this->generateUrl($listRoute),
             'title' => $allUsers ? 'All expenses' : 'My expenses',
             'timezone' => $user->getTimezone(),
             'page' => $page,
             'pages' => $pages,
+            'per_page' => self::PER_PAGE,
             'total_count' => $totalCount,
             'sum_total' => $this->expenses->sumTotal($query, $timezone),
         ]);
     }
 
     /**
-     * Shared by create and edit.
+     * Column definitions in the format Kimai's datatable macros expect: a plain
+     * string is the column's CSS class, an array can also carry a title.
+     * Titles that are Kimai translation keys (date, customer, project, user)
+     * are translated by Kimai; the others are plain text.
+     *
+     * "alwaysVisible" columns cannot be hidden in Kimai's column chooser; the
+     * d-none d-*-table-cell classes hide a column on narrow screens.
+     *
+     * @return array<string, string|array<string, string>>
      */
-    private function processForm(Request $request, Expense $expense, bool $isNew): Response
+    private function tableColumns(bool $allUsers, bool $canSelect): array
+    {
+        $columns = [];
+
+        if ($canSelect) {
+            $columns['select'] = [
+                'class' => 'alwaysVisible w-1',
+                'title' => '',
+                'html_after' => '<input class="form-check-input m-0 align-middle" type="checkbox" data-expense-select-all aria-label="Select all">',
+            ];
+        }
+
+        $columns['date'] = 'alwaysVisible';
+        $columns['category'] = ['class' => 'alwaysVisible', 'title' => 'Category'];
+        $columns['customer'] = 'd-none d-md-table-cell';
+        $columns['project'] = 'd-none d-lg-table-cell';
+        $columns['quantity'] = ['class' => 'text-end d-none d-sm-table-cell', 'title' => 'Quantity'];
+        $columns['cost'] = ['class' => 'text-end d-none d-xl-table-cell', 'title' => 'Cost'];
+        $columns['total'] = ['class' => 'text-end alwaysVisible', 'title' => 'Total'];
+        $columns['status'] = ['class' => 'd-none d-lg-table-cell', 'title' => 'Status'];
+
+        if ($allUsers) {
+            // Last data column, like Kimai's "All times".
+            $columns['user'] = 'd-none d-md-table-cell';
+        }
+
+        $columns['actions'] = 'actions alwaysVisible';
+
+        return $columns;
+    }
+
+    /**
+     * Shared by create, copy and edit.
+     */
+    private function processForm(Request $request, Expense $expense, bool $isNew, ?string $title = null): Response
     {
         $user = $this->getAuthenticatedUser();
         $returnUrl = $this->resolveReturnUrl($request);
@@ -275,7 +356,7 @@ final class ExpenseController extends AbstractController
 
         return $this->render($template, [
             'form' => $form->createView(),
-            'title' => $isNew ? 'New expense' : 'Edit expense',
+            'title' => $title ?? ($isNew ? 'New expense' : 'Edit expense'),
             'cancel_url' => $returnUrl,
         ]);
     }

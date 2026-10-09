@@ -284,6 +284,27 @@ class Expense
     }
 
     /**
+     * A new, unsaved copy for "Create copy": same category, quantity, rate,
+     * links, description and billable flag, but dated now, never exported, and
+     * without a receipt (the file itself is not duplicated).
+     */
+    public function duplicateFor(User $owner): self
+    {
+        $copy = new self();
+        $copy->user = $owner;
+        $copy->category = $this->category;
+        $copy->cost = $this->cost;
+        $copy->quantity = $this->quantity;
+        $copy->description = $this->description;
+        $copy->billable = $this->billable;
+        $copy->customer = $this->customer;
+        $copy->project = $this->project;
+        $copy->activity = $this->activity;
+
+        return $copy;
+    }
+
+    /**
      * quantity x cost, e.g. 47.5 miles x 0.70 = 33.25. Used for display and as
      * the invoice line amount; Kimai rounds money when it renders the invoice.
      */
