@@ -19,6 +19,8 @@ use Symfony\Component\Form\CallbackTransformer;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormInterface;
+use Symfony\Component\Form\FormView;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
@@ -34,7 +36,6 @@ final class ExpenseType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $canEditCost = (bool) $options['can_edit_cost'];
         $canEditExport = (bool) $options['can_edit_export'];
         $timezone = (string) $options['timezone'];
         $userTimezone = new \DateTimeZone($timezone);
@@ -94,6 +95,11 @@ final class ExpenseType extends AbstractType
                         'data-default-cost' => $category->getDefaultCost(),
                         'data-help' => (string) $category->getHelpText(),
                         'data-description' => (string) $category->getDescription(),
+                        // How the editor adapts to the category (see the form script):
+                        // quantity shown by default + its label, and price entered vs fixed.
+                        'data-unit' => (string) $category->getUnit(),
+                        'data-ask-quantity' => $category->isAskQuantity() ? '1' : '0',
+                        'data-price-entered' => $category->isPriceEntered() ? '1' : '0',
                     ];
                 },
                 'query_builder' => static function ($repository) {
@@ -125,9 +131,9 @@ final class ExpenseType extends AbstractType
                 'label' => 'Cost per unit',
                 // Show at least 2 decimals (1.00), more only when the rate needs them.
                 'min_decimals' => 2,
-                // Disabled for normal users. The server also enforces the
-                // permission; disabling this field is only a UI convenience.
-                'disabled' => !$canEditCost,
+                // Never disabled here: for categories where the price is typed in, every
+                // user must be able to enter it. For fixed-rate categories the form script
+                // makes it read-only without the permission, and the controller enforces it.
             ])
             ->add('billable', CheckboxType::class, [
                 'required' => false,
@@ -151,6 +157,12 @@ final class ExpenseType extends AbstractType
                 ? null
                 : \DateTime::createFromInterface($value)->setTimezone($utc),
         ));
+    }
+
+    public function buildView(FormView $view, FormInterface $form, array $options): void
+    {
+        // Lets the template tell the form script whether this user may change a fixed rate.
+        $view->vars['can_edit_cost'] = (bool) $options['can_edit_cost'];
     }
 
     public function configureOptions(OptionsResolver $resolver): void

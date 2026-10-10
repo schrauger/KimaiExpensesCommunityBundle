@@ -1,7 +1,7 @@
-{# Returned for AJAX requests; Kimai's modal-ajax-form puts it in its own modal. #}
+{# Returned for modal requests; Kimai's modal-ajax-form puts it in its own modal. #}
 {% embed '@theme/embeds/modal.html.twig' %}
     {% block modal_id %}form_modal{% endblock %}
-    {% block modal_before %}{{ form_start(form) }}{% endblock %}
+    {% block modal_before %}{{ form_start(form, {attr: {'data-form-event': 'kimai.expenseUpdate'}}) }}{% endblock %}
     {% block modal_effects %}{% endblock %}
     {% block modal_title %}{{ title }}{% endblock %}
     {% block modal_body %}

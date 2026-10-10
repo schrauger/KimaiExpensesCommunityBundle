@@ -10,10 +10,22 @@ use KimaiPlugin\KimaiExpensesCommunityBundle\Repository\ExpenseCategoryRepositor
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * A price list entry for expenses: a unit (mile, night, item ...) and a default
- * cost per unit. This is deliberately separate from Kimai's Activity, which
- * describes WORK and has hourly/fixed rates; a category describes a PURCHASE or
- * allowance with a per-unit price, help text and a default description.
+ * A kind of expense and how it is priced. This is deliberately separate from
+ * Kimai's Activity, which describes WORK and carries hourly/fixed rates.
+ *
+ * Two independent choices describe how an expense of this category is entered:
+ *
+ *  - Quantity: "ask for a quantity" shows the quantity field by default (miles,
+ *    nights, litres ...), labelled with the unit label. Otherwise the quantity
+ *    stays in "Extended settings" and is 1.
+ *  - Price: either a FIXED rate taken from "default cost" (mileage, a daily
+ *    allowance), or ENTERED on each expense (a receipt total, the price of fuel).
+ *
+ * Examples:
+ *  - Restaurant receipt: no quantity, price entered      -> type the receipt total
+ *  - Mileage:            quantity (Miles), fixed rate     -> type the miles
+ *  - Fuel:               quantity (Litres), price entered -> type litres and price per litre
+ *  - Phone allowance:    no quantity, fixed rate          -> nothing to type
  */
 #[ORM\Entity(repositoryClass: ExpenseCategoryRepository::class)]
 #[ORM\Table(name: 'kimai2_kimai_expenses_community_category')]
@@ -29,14 +41,30 @@ class ExpenseCategory
     #[Assert\Length(max: 100)]
     private string $name = '';
 
-    #[ORM\Column(length: 30)]
-    #[Assert\NotBlank]
+    /**
+     * Optional label for the quantity ("Miles", "Nights"). Used as the quantity
+     * field's label and shown after quantities in lists. Empty means "Quantity".
+     */
+    #[ORM\Column(length: 30, nullable: true)]
     #[Assert\Length(max: 30)]
-    private string $unit = 'item';
+    private ?string $unit = null;
 
+    /** The fixed rate per unit, or an optional prefill when the price is entered per expense. */
     #[ORM\Column(type: Types::DECIMAL, precision: 12, scale: 4)]
     #[Assert\GreaterThanOrEqual(0)]
-    private string $defaultCost = '1.0000';
+    private string $defaultCost = '0.0000';
+
+    /** Show the quantity field by default (otherwise it sits in "Extended settings"). */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $askQuantity = false;
+
+    /**
+     * The price is typed in on each expense (receipts and other variable amounts)
+     * instead of coming from the fixed rate. New categories start as "entered" because
+     * most expenses are receipts; existing categories keep their fixed rate.
+     */
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private bool $priceEntered = true;
 
     /** Hidden categories stay on old expenses but cannot be chosen for new ones. */
     #[ORM\Column(type: Types::BOOLEAN, options: ['default' => true])]
@@ -72,14 +100,15 @@ class ExpenseCategory
         return $this;
     }
 
-    public function getUnit(): string
+    public function getUnit(): ?string
     {
         return $this->unit;
     }
 
-    public function setUnit(string $unit): self
+    public function setUnit(?string $unit): self
     {
-        $this->unit = trim($unit);
+        $unit = $unit !== null ? trim($unit) : null;
+        $this->unit = $unit === '' ? null : $unit;
 
         return $this;
     }
@@ -89,9 +118,33 @@ class ExpenseCategory
         return $this->defaultCost;
     }
 
-    public function setDefaultCost(string|float|int $cost): self
+    public function setDefaultCost(string|float|int|null $cost): self
     {
-        $this->defaultCost = number_format((float) $cost, 4, '.', '');
+        $this->defaultCost = number_format((float) ($cost ?? 0), 4, '.', '');
+
+        return $this;
+    }
+
+    public function isAskQuantity(): bool
+    {
+        return $this->askQuantity;
+    }
+
+    public function setAskQuantity(bool $askQuantity): self
+    {
+        $this->askQuantity = $askQuantity;
+
+        return $this;
+    }
+
+    public function isPriceEntered(): bool
+    {
+        return $this->priceEntered;
+    }
+
+    public function setPriceEntered(bool $priceEntered): self
+    {
+        $this->priceEntered = $priceEntered;
 
         return $this;
     }

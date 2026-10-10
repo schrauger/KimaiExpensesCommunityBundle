@@ -1,8 +1,15 @@
-{# Returned for AJAX requests; Kimai's modal-ajax-form puts it in its own modal. #}
+{# Returned for modal requests; Kimai's modal-ajax-form puts it in its own modal. #}
 {# Same structure as Kimai's form modals (see templates/default/_form_delete_modal.html.twig). #}
 {% embed '@theme/embeds/modal.html.twig' %}
     {% block modal_id %}form_modal{% endblock %}
-    {% block modal_before %}{{ form_start(form, {attr: {'data-expense-form': 'modal'}}) }}{% endblock %}
+    {% block modal_before %}
+        {# data-form-event: Kimai fires this event after a successful save (the list reloads). #}
+        {{ form_start(form, {attr: {
+            'data-expense-form': 'modal',
+            'data-form-event': 'kimai.expenseUpdate',
+            'data-can-edit-cost': form.vars.can_edit_cost ? '1' : '0'
+        }}) }}
+    {% endblock %}
     {% block modal_effects %}{% endblock %}
     {% block modal_title %}{{ title }}{% endblock %}
     {% block modal_body %}

@@ -4,7 +4,7 @@
 {% block expense_content %}
 <div class="card">
     <div class="card-body">
-        {{ form_start(form, {attr: {'data-expense-form': ''}}) }}
+        {{ form_start(form, {attr: {'data-expense-form': '', 'data-can-edit-cost': form.vars.can_edit_cost ? '1' : '0'}}) }}
         {{ include('@KimaiExpensesCommunity/expense/_form_fields.html.twig') }}
 
         <div class="mt-4">

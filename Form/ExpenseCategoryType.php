@@ -21,25 +21,34 @@ final class ExpenseCategoryType extends AbstractType
             ->add('name', TextType::class, [
                 'label' => 'Name',
             ])
-            ->add('unit', TextType::class, [
-                'label' => 'Unit',
-                'help' => 'Examples: mile, km, item, night.',
+            ->add('priceEntered', CheckboxType::class, [
+                'required' => false,
+                'label' => 'Enter the price on each expense',
+                'help' => 'Tick for receipts and other variable amounts: people type the amount when they add an expense. Leave unticked for a fixed rate such as mileage, taken from "Default cost".',
             ])
             ->add('defaultCost', NumberType::class, [
+                'required' => false,
                 'label' => 'Default cost per unit',
                 'scale' => 4,
                 'html5' => true,
+                'help' => 'The fixed rate (for example 0.70 per mile). When the price is entered per expense this is only an optional prefill; leave it 0 for none.',
+            ])
+            ->add('askQuantity', CheckboxType::class, [
+                'required' => false,
+                'label' => 'Ask for a quantity',
+                'help' => 'Show the quantity field by default (miles, nights, litres ...). Otherwise it stays in Extended settings and is 1.',
+            ])
+            ->add('unit', TextType::class, [
+                'required' => false,
+                'label' => 'Unit label',
+                'help' => 'Optional, e.g. Miles or Nights. Used as the quantity field\'s label and shown after quantities in lists. Empty shows "Quantity".',
+                'attr' => ['maxlength' => 30],
             ])
             ->add('color', TextType::class, [
                 'required' => false,
                 'label' => 'Color',
                 'help' => 'Optional hex colour, e.g. #3b82f6. Shown as a dot next to the category in lists.',
                 'attr' => ['placeholder' => '#3b82f6', 'maxlength' => 7],
-            ])
-            ->add('visible', CheckboxType::class, [
-                'required' => false,
-                'label' => 'Visible to users',
-                'help' => 'Hide a category instead of deleting it once expenses use it.',
             ])
             ->add('helpText', TextareaType::class, [
                 'required' => false,
@@ -50,6 +59,11 @@ final class ExpenseCategoryType extends AbstractType
                 'required' => false,
                 'label' => 'Description',
                 'help' => 'Copied into the expense description when this category is chosen (only if that is still empty).',
+            ])
+            ->add('visible', CheckboxType::class, [
+                'required' => false,
+                'label' => 'Visible to users',
+                'help' => 'Hide a category instead of deleting it once expenses use it.',
             ]);
     }
 

@@ -20,6 +20,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted(ExpensePermissions::MANAGE_CATEGORY)]
 final class ExpenseCategoryController extends AbstractController
 {
+    use ModalFormTrait;
+
     public function __construct(
         private readonly ExpenseCategoryRepository $categories,
         private readonly ExpenseRepository $expenses,
@@ -76,9 +78,11 @@ final class ExpenseCategoryController extends AbstractController
      */
     private function processForm(Request $request, ExpenseCategory $category, bool $isNew): Response
     {
+        $modal = $this->isModalRequest($request);
+        $params = $modal ? ['modal' => 1] : [];
         $action = $isNew
-            ? $this->generateUrl('kimai_expenses_community_category_create')
-            : $this->generateUrl('kimai_expenses_community_category_edit', ['id' => $category->getId()]);
+            ? $this->generateUrl('kimai_expenses_community_category_create', $params)
+            : $this->generateUrl('kimai_expenses_community_category_edit', ['id' => $category->getId()] + $params);
 
         $form = $this->createForm(ExpenseCategoryType::class, $category, ['action' => $action]);
         $form->handleRequest($request);
@@ -91,10 +95,12 @@ final class ExpenseCategoryController extends AbstractController
 
             $this->addFlash('success', $isNew ? 'Category created.' : 'Category updated.');
 
-            return $this->redirectToRoute('kimai_expenses_community_category');
+            $listUrl = $this->generateUrl('kimai_expenses_community_category');
+
+            return $modal ? $this->modalSaved($listUrl) : $this->redirect($listUrl);
         }
 
-        $template = $request->isXmlHttpRequest()
+        $template = $modal
             ? '@KimaiExpensesCommunity/category/modal.html.twig'
             : '@KimaiExpensesCommunity/category/form.html.twig';
 

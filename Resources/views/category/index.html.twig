@@ -4,7 +4,7 @@
 
 {% block expense_actions %}
     <a class="btn modal-ajax-form" data-event="kimai.expenseUpdate"
-       href="{{ path('kimai_expenses_community_category_create') }}">
+       href="{{ path('kimai_expenses_community_category_create', {modal: 1}) }}">
         <i class="fas fa-plus"></i><span class="ms-1">Create</span>
     </a>
 {% endblock %}
@@ -14,9 +14,9 @@
 {# A plain string is the column's CSS class; an array can also carry a title (see ExpenseController::tableColumns). #}
 {% set columns = {
     'name': 'alwaysVisible',
-    'unit': {'class': 'd-none d-sm-table-cell', 'title': 'Unit'},
-    'default_cost': {'class': 'text-end d-none d-sm-table-cell', 'title': 'Default cost'},
-    'description': 'd-none d-md-table-cell',
+    'price': {'class': 'd-none d-sm-table-cell', 'title': 'Price'},
+    'quantity': {'class': 'd-none d-md-table-cell', 'title': 'Quantity'},
+    'description': 'd-none d-lg-table-cell',
     'visible': {'class': 'd-none d-md-table-cell', 'title': 'Visible'},
     'actions': 'actions alwaysVisible',
 } %}
@@ -25,13 +25,25 @@
 
 {% for category in categories %}
     <tr class="modal-ajax-form open-edit" data-event="kimai.expenseUpdate"
-        data-href="{{ path('kimai_expenses_community_category_edit', {id: category.id}) }}">
+        data-href="{{ path('kimai_expenses_community_category_edit', {id: category.id, modal: 1}) }}">
         <td class="{{ tables.data_table_column_class(table_name, columns, 'name') }}">
             {{ include('@KimaiExpensesCommunity/expense/_dot.html.twig', {color: category.color}) }}
             <strong>{{ category.name }}</strong>
         </td>
-        <td class="{{ tables.data_table_column_class(table_name, columns, 'unit') }}">{{ category.unit }}</td>
-        <td class="{{ tables.data_table_column_class(table_name, columns, 'default_cost') }}">{{ category.defaultCost|number_format(4, '.', ',') }}</td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'price') }}">
+            {% if category.priceEntered %}
+                <span class="text-secondary">Entered on each expense</span>{% if category.defaultCost + 0 > 0 %} <span class="text-secondary">(prefill {{ category.defaultCost + 0 }})</span>{% endif %}
+            {% else %}
+                {{ category.defaultCost|number_format(4, '.', ',') }}{% if category.unit %} <span class="text-secondary">per {{ category.unit }}</span>{% endif %}
+            {% endif %}
+        </td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'quantity') }}">
+            {% if category.askQuantity %}
+                {{ category.unit ?: 'Quantity' }}
+            {% else %}
+                <span class="text-secondary">—</span>
+            {% endif %}
+        </td>
         <td class="{{ tables.data_table_column_class(table_name, columns, 'description') }}">{{ category.description|default('—') }}</td>
         <td class="{{ tables.data_table_column_class(table_name, columns, 'visible') }}">
             {% if category.visible %}
@@ -42,11 +54,11 @@
         </td>
         <td class="{{ tables.data_table_column_class(table_name, columns, 'actions') }}">
             <div class="dropdown">
-                <a class="btn btn-icon btn-sm btn-ghost-secondary" href="#" data-bs-toggle="dropdown"
+                <a class="btn-action text-secondary" href="#" data-bs-toggle="dropdown"
                    data-bs-boundary="viewport" aria-expanded="false" aria-label="Actions"><i class="fas fa-ellipsis"></i></a>
                 <div class="dropdown-menu dropdown-menu-end">
                     <a class="dropdown-item modal-ajax-form" data-event="kimai.expenseUpdate"
-                       href="{{ path('kimai_expenses_community_category_edit', {id: category.id}) }}">Edit</a>
+                       href="{{ path('kimai_expenses_community_category_edit', {id: category.id, modal: 1}) }}">Edit</a>
                     <div class="dropdown-divider"></div>
                     <form method="post" action="{{ path('kimai_expenses_community_category_delete', {id: category.id}) }}"
                           onsubmit="return confirm('Delete this category?');">

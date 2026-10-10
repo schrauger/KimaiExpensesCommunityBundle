@@ -31,6 +31,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[Route('/expenses')]
 final class ExpenseController extends AbstractController
 {
+    use ModalFormTrait;
+
     /** Rows per page in the overview. */
     private const PER_PAGE = 50;
 
@@ -244,6 +246,7 @@ final class ExpenseController extends AbstractController
 
         $listRoute = $allUsers ? 'kimai_expenses_community_all' : 'kimai_expenses_community';
         $canChangeExport = $this->isGranted(ExpensePermissions::EDIT_EXPORT);
+        $columns = $this->tableColumns($allUsers, $canChangeExport);
 
         return $this->render('@KimaiExpensesCommunity/expense/index.html.twig', [
             'expenses' => $rows,
@@ -254,7 +257,7 @@ final class ExpenseController extends AbstractController
             'can_change_export' => $canChangeExport,
             'can_export' => $this->isGranted(ExpensePermissions::EXPORT),
             'table_name' => $allUsers ? 'expenses_community_all' : 'expenses_community',
-            'columns' => $this->tableColumns($allUsers, $canChangeExport),
+            'columns' => $columns,
             'list_route' => $listRoute,
             'reset_url' => $this->generateUrl($listRoute),
             'title' => $allUsers ? 'All expenses' : 'My expenses',
@@ -294,6 +297,7 @@ final class ExpenseController extends AbstractController
         $columns['category'] = ['class' => 'alwaysVisible', 'title' => 'Category'];
         $columns['customer'] = 'd-none d-md-table-cell';
         $columns['project'] = 'd-none d-lg-table-cell';
+        $columns['activity'] = 'd-none d-xl-table-cell';
         $columns['quantity'] = ['class' => 'text-end d-none d-sm-table-cell', 'title' => 'Quantity'];
         $columns['cost'] = ['class' => 'text-end d-none d-xl-table-cell', 'title' => 'Cost'];
         $columns['total'] = ['class' => 'text-end alwaysVisible', 'title' => 'Total'];
@@ -321,10 +325,14 @@ final class ExpenseController extends AbstractController
         // Remember the persisted rate. A normal user is not allowed to submit
         // a changed cost, even if they manipulate the HTML form in a browser.
         $originalCost = $expense->getCost();
+        $originalCategoryId = $isNew ? null : $expense->getCategory()->getId();
+        $modal = $this->isModalRequest($request);
 
+        // The form posts back to the same kind of request it was loaded with.
+        $params = ['returnUrl' => $returnUrl] + ($modal ? ['modal' => 1] : []);
         $action = $isNew
-            ? $this->generateUrl('kimai_expenses_community_create', ['returnUrl' => $returnUrl])
-            : $this->generateUrl('kimai_expenses_community_edit', ['id' => $expense->getId(), 'returnUrl' => $returnUrl]);
+            ? $this->generateUrl('kimai_expenses_community_create', $params)
+            : $this->generateUrl('kimai_expenses_community_edit', ['id' => $expense->getId()] + $params);
 
         $form = $this->createForm(ExpenseType::class, $expense, [
             'action' => $action,
@@ -335,9 +343,13 @@ final class ExpenseController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            if (!$canEditCost) {
-                // The rate always comes from the server, never from the browser.
-                $expense->setCost($isNew ? $expense->getCategory()->getDefaultCost() : $originalCost);
+            $category = $expense->getCategory();
+
+            // A fixed rate always comes from the server, never from the browser. Categories
+            // whose price is typed in per expense are open to everyone.
+            if (!$canEditCost && !$category->isPriceEntered()) {
+                $sameCategory = !$isNew && $originalCategoryId === $category->getId();
+                $expense->setCost($sameCategory ? $originalCost : $category->getDefaultCost());
             }
 
             if ($isNew) {
@@ -347,10 +359,10 @@ final class ExpenseController extends AbstractController
 
             $this->addFlash('success', $isNew ? 'Expense created.' : 'Expense updated.');
 
-            return $this->redirect($returnUrl);
+            return $modal ? $this->modalSaved($returnUrl) : $this->redirect($returnUrl);
         }
 
-        $template = $request->isXmlHttpRequest()
+        $template = $modal
             ? '@KimaiExpensesCommunity/expense/modal.html.twig'
             : '@KimaiExpensesCommunity/expense/form.html.twig';
 

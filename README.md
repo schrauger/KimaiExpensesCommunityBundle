@@ -6,8 +6,8 @@ This is an independent implementation based on Kimai's public plugin APIs and do
 
 ## Features
 
-- **Categories** with a unit (mile, night, item ...), a default cost per unit, an optional colour, help text, and a default description
-- **quantity × cost** totals; negative quantities are allowed for credits and corrections
+- **Categories** that decide how an expense is entered: an optional quantity with an optional unit label, and a price that is either typed in per expense (receipts) or a fixed rate (mileage); plus an optional colour, help text and default description
+- **quantity × cost** totals (the quantity is 1 unless the category asks for one); negative quantities are allowed for credits and corrections
 - Date and time, user, customer / project / activity, description, billable flag
 - **Native Kimai look:** the list uses Kimai's own datatable markup (column chooser, filter dropdown, row click to edit, ⋯ menu with Edit / Create copy / Receipt / Delete), Kimai's customer/project/activity pickers, and Kimai's modal; pagination and totals cover the whole filtered list
 - **My expenses** and **All expenses** (the latter needs `view_other_timesheet`)
@@ -15,6 +15,24 @@ This is an independent implementation based on Kimai's public plugin APIs and do
 - **Export state:** an "Exported" checkbox in the edit form and bulk "Mark as (not) exported" in the list; exported records are locked like Kimai timesheets
 - **Receipts:** attach a PDF/JPG/PNG/WebP to an expense, view or remove it later
 - **CSV export** of the current filter (formula-injection safe, opens cleanly in Excel)
+
+### Setting up categories
+
+Each category answers two questions:
+
+1. **Does it need a quantity?** *Ask for a quantity* shows the quantity field by default, labelled with the *Unit label* (or "Quantity" if there is none). Otherwise the quantity moves to Extended settings and is 1.
+2. **Where does the price come from?** *Enter the price on each expense* shows an "Amount" field (or "Cost per unit" when a quantity is asked) that people type in. Without it, the price is the fixed *Default cost*, shown in Extended settings and changeable only with the `edit_kimai_expenses_community_cost` permission.
+
+| Kind of expense | Ask for a quantity | Price entered | Unit label | What people type |
+| --- | --- | --- | --- | --- |
+| Receipt (restaurant, supplies, parking, tolls, software) | no | yes | – | the receipt total |
+| Mileage | yes | no (fixed, e.g. 0.70) | Miles | the miles |
+| Per diem / daily allowance | yes | no (fixed) | Days | the number of days |
+| Fuel | yes | yes | Litres | litres and the price per litre |
+| Flat allowance (phone, internet) | no | no (fixed) | – | nothing, just pick the category |
+| Hotel at a company rate | yes | no (fixed) | Nights | the number of nights |
+
+Most expenses are one-off receipts, so new categories start as "no quantity, price entered". In the list, expenses of a category without a quantity show a dash for quantity and cost (unless the quantity was changed from 1); categories with a quantity show it with the unit label.
 
 ### Categories vs. Activities
 

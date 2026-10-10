@@ -190,9 +190,10 @@ class Expense
         return $this->quantity;
     }
 
-    public function setQuantity(string|float|int $quantity): self
+    public function setQuantity(string|float|int|null $quantity): self
     {
-        $this->quantity = number_format((float) $quantity, 4, '.', '');
+        // An empty quantity means "one" (the quantity is optional for many categories).
+        $this->quantity = number_format((float) ($quantity ?? 1), 4, '.', '');
 
         return $this;
     }
@@ -202,9 +203,9 @@ class Expense
         return $this->cost;
     }
 
-    public function setCost(string|float|int $cost): self
+    public function setCost(string|float|int|null $cost): self
     {
-        $this->cost = number_format((float) $cost, 4, '.', '');
+        $this->cost = number_format((float) ($cost ?? 0), 4, '.', '');
 
         return $this;
     }
@@ -311,6 +312,19 @@ class Expense
     public function getTotal(): float
     {
         return (float) $this->quantity * (float) $this->cost;
+    }
+
+    /**
+     * Categories whose price is typed in per expense (receipts ...) need a real amount.
+     */
+    #[Assert\Callback]
+    public function validateAmount(ExecutionContextInterface $context): void
+    {
+        if (isset($this->category) && $this->category->isPriceEntered() && (float) $this->cost <= 0) {
+            $context->buildViolation('Enter the amount.')
+                ->atPath('cost')
+                ->addViolation();
+        }
     }
 
     /**

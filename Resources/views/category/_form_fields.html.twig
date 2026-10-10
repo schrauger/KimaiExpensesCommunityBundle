@@ -3,8 +3,15 @@
 {{ form_errors(form) }}
 
 {{ form_row(form.name) }}
-{{ form_row(form.unit) }}
+
+{# Price: typed in per expense (receipts) or a fixed rate (mileage). #}
+{{ form_row(form.priceEntered) }}
 {{ form_row(form.defaultCost) }}
+
+{# Quantity: optional, with an optional unit label. #}
+{{ form_row(form.askQuantity) }}
+{{ form_row(form.unit) }}
+
 {{ form_row(form.color) }}
 {{ form_row(form.helpText) }}
 {{ form_row(form.description) }}

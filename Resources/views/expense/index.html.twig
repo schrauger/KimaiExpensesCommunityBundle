@@ -40,14 +40,15 @@
 {# Create / Export, at the right of the page header. #}
 {% block expense_actions %}
     {% if is_granted('create_kimai_expenses_community') %}
-        {# "modal-ajax-form" is Kimai's own class: it opens the link in Kimai's modal. #}
+        {# "modal-ajax-form" is Kimai's own class: it opens the link in Kimai's modal. "modal=1" marks the request as a modal one. #}
         <a class="btn modal-ajax-form" data-event="kimai.expenseUpdate"
-           href="{{ path('kimai_expenses_community_create', {returnUrl: app.request.requestUri}) }}">
+           href="{{ path('kimai_expenses_community_create', {returnUrl: app.request.requestUri, modal: 1}) }}">
             <i class="fas fa-plus"></i><span class="ms-1">Create</span>
         </a>
     {% endif %}
     {% if can_export %}
-        <div class="dropdown">
+        {# Raised above the table header, which would otherwise cover the menu. #}
+        <div class="dropdown position-relative" style="z-index: 1060;">
             <a class="btn dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-download"></i><span class="ms-1">Export</span>
             </a>
@@ -76,8 +77,12 @@
     {% set canEdit = editable[expense.id] and is_granted('edit_kimai_expenses_community') %}
     {% set local = date(expense.date, timezone) %}
     {% set currency = expense.project ? expense.project.customer.currency : (expense.customer ? expense.customer.currency : null) %}
+    {# Dots, like Kimai's own lists: a project without a colour takes its customer's colour. #}
+    {% set projectColor = expense.project ? (expense.project.color ?: expense.project.customer.color) : null %}
+    {# The quantity and rate only matter when the category asks for a quantity, or someone changed it from 1. #}
+    {% set showQuantity = expense.category.askQuantity or (expense.quantity + 0) != 1 %}
     <tr{% if canEdit %} class="modal-ajax-form open-edit" data-event="kimai.expenseUpdate"
-        data-href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri}) }}"{% endif %}>
+        data-href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri, modal: 1}) }}"{% endif %}>
         {% if can_change_export %}
             <td class="w-1">
                 <input class="form-check-input m-0 align-middle" type="checkbox" name="ids[]" value="{{ expense.id }}" form="expense-bulk" aria-label="Select expense">
@@ -102,13 +107,20 @@
         </td>
         <td class="{{ tables.data_table_column_class(table_name, columns, 'project') }}">
             {% if expense.project %}
-                {{ include('@KimaiExpensesCommunity/expense/_dot.html.twig', {color: expense.project.color}) }}{{ expense.project.name }}
+                {{ include('@KimaiExpensesCommunity/expense/_dot.html.twig', {color: projectColor}) }}{{ expense.project.name }}
+            {% endif %}
+        </td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'activity') }}">
+            {% if expense.activity %}
+                {{ include('@KimaiExpensesCommunity/expense/_dot.html.twig', {color: expense.activity.color}) }}{{ expense.activity.name }}
             {% endif %}
         </td>
         <td class="{{ tables.data_table_column_class(table_name, columns, 'quantity') }} text-nowrap">
-            {{ expense.quantity + 0 }} {{ expense.category.unit }}
+            {% if showQuantity %}{{ expense.quantity + 0 }}{% if expense.category.unit %} {{ expense.category.unit }}{% endif %}{% else %}—{% endif %}
         </td>
-        <td class="{{ tables.data_table_column_class(table_name, columns, 'cost') }}">{{ expense.cost|number_format(4, '.', ',') }}</td>
+        <td class="{{ tables.data_table_column_class(table_name, columns, 'cost') }}">
+            {% if showQuantity %}{{ expense.cost|number_format(4, '.', ',') }}{% else %}—{% endif %}
+        </td>
         <td class="{{ tables.data_table_column_class(table_name, columns, 'total') }} text-nowrap">
             <strong>{% if currency %}{{ expense.total|money(currency) }}{% else %}{{ expense.total|number_format(2, '.', ',') }}{% endif %}</strong>
         </td>
@@ -124,16 +136,16 @@
         {% endif %}
         <td class="{{ tables.data_table_column_class(table_name, columns, 'actions') }}">
             <div class="dropdown">
-                <a class="btn btn-icon btn-sm btn-ghost-secondary" href="#" data-bs-toggle="dropdown"
+                <a class="btn-action text-secondary" href="#" data-bs-toggle="dropdown"
                    data-bs-boundary="viewport" aria-expanded="false" aria-label="Actions"><i class="fas fa-ellipsis"></i></a>
                 <div class="dropdown-menu dropdown-menu-end">
                     {% if canEdit %}
                         <a class="dropdown-item modal-ajax-form" data-event="kimai.expenseUpdate"
-                           href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri}) }}">Edit</a>
+                           href="{{ path('kimai_expenses_community_edit', {id: expense.id, returnUrl: app.request.requestUri, modal: 1}) }}">Edit</a>
                     {% endif %}
                     {% if is_granted('create_kimai_expenses_community') %}
                         <a class="dropdown-item modal-ajax-form" data-event="kimai.expenseUpdate"
-                           href="{{ path('kimai_expenses_community_duplicate', {id: expense.id, returnUrl: app.request.requestUri}) }}">Create copy</a>
+                           href="{{ path('kimai_expenses_community_duplicate', {id: expense.id, returnUrl: app.request.requestUri, modal: 1}) }}">Create copy</a>
                     {% endif %}
                     <a class="dropdown-item" href="{{ path('kimai_expenses_community_receipt', {id: expense.id}) }}">Receipt</a>
                     {% if editable[expense.id] and is_granted('delete_kimai_expenses_community') %}

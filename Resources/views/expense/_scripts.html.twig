@@ -35,10 +35,10 @@
         }
     }
 
-    // ---- Customer -> Project -------------------------------------------------
+    // ---- Customer -> Project (plain selects only) ------------------------------
     // Keeps every project option in memory and rebuilds the <select> with only
     // the selected customer's projects. With autoSelect, a customer that has
-    // exactly one project selects it automatically, like Kimai's time tracking.
+    // exactly one project selects it automatically.
     function linkCustomerAndProject(customer, project, autoSelect) {
         if (!customer || !project) {
             return;
@@ -105,28 +105,69 @@
         const category = pick(form, 'category');
         const quantity = pick(form, 'quantity');
         const cost = pick(form, 'cost');
+        const description = pick(form, 'description');
         const total = form.querySelector('[data-expense-total]');
         const unitLabel = form.querySelector('[data-expense-unit]');
         const extended = form.querySelector('[data-expense-extended]');
         const extendedToggle = form.querySelector('[data-expense-toggle]');
-        const canEditCost = !!cost && !cost.disabled;
-        const description = pick(form, 'description');
         const help = form.querySelector('[data-expense-help]');
+        const mainSlot = form.querySelector('[data-expense-slot="main"]');
+        const extendedSlot = form.querySelector('[data-expense-slot="extended"]');
+        const quantityRow = form.querySelector('[data-expense-field="quantity"]');
+        const costRow = form.querySelector('[data-expense-field="cost"]');
+        const quantityLabel = quantity ? form.querySelector('label[for="' + quantity.id + '"]') : null;
+        const costLabel = cost ? form.querySelector('label[for="' + cost.id + '"]') : null;
+        // May this user change a FIXED rate? (Typed-in prices are open to everyone.)
+        const canEditCost = form.dataset.canEditCost === '1';
         let autoDescription = '';
 
         linkCustomerAndProject(customer, project, true);
 
         function selectedCategory() {
-            return category ? category.options[category.selectedIndex] : null;
+            const option = category ? category.options[category.selectedIndex] : null;
+            return option && option.value !== '' ? option : null;
+        }
+
+        // The category decides what the editor asks for:
+        //  - quantity: in the main form (labelled with the unit) or tucked into Extended settings
+        //  - price:    typed in the main form (receipts) or a fixed rate in Extended settings
+        function applyCategoryLayout() {
+            const option = selectedCategory();
+            const askQuantity = !!option && option.dataset.askQuantity === '1';
+            const priceEntered = !!option && option.dataset.priceEntered === '1';
+            const unit = option && option.dataset.unit ? option.dataset.unit : '';
+
+            // Quantity first, then price: appending keeps that order inside a slot.
+            if (mainSlot && extendedSlot) {
+                if (quantityRow) { (askQuantity ? mainSlot : extendedSlot).appendChild(quantityRow); }
+                if (costRow) { (priceEntered ? mainSlot : extendedSlot).appendChild(costRow); }
+            }
+
+            if (quantityLabel) {
+                quantityLabel.textContent = unit || 'Quantity';
+            }
+            if (costLabel) {
+                costLabel.textContent = priceEntered && !askQuantity ? 'Amount' : 'Cost per unit';
+            }
+            if (cost) {
+                cost.readOnly = !(canEditCost || priceEntered);
+            }
         }
 
         function updateRateFromCategory() {
-            if (!category || !cost || !canEditCost) {
+            const option = selectedCategory();
+            if (!option || !cost) {
                 return;
             }
-            const option = selectedCategory();
-            const rate = option ? option.dataset.defaultCost : null;
-            if (rate !== null && rate !== undefined && rate !== '') {
+            const rate = option.dataset.defaultCost;
+            const entered = option.dataset.priceEntered === '1';
+
+            if (entered && !(parseFloat(rate) > 0)) {
+                // Nothing to prefill: the person types the amount.
+                cost.value = '';
+                return;
+            }
+            if (rate !== undefined && rate !== '') {
                 cost.value = formatDecimal(rate, 2);
             }
         }
@@ -162,30 +203,39 @@
             }
         }
 
-        // The cost field lives in a collapsed accordion. If the browser rejects
+        // The cost field can sit in the collapsed accordion. If the browser rejects
         // it (e.g. it was cleared), open the accordion so the message is visible.
-        if (cost) {
-            cost.addEventListener('invalid', function () {
-                if (extended) { extended.classList.add('show'); }
+        function revealExtendedOnInvalid(field) {
+            if (!field) {
+                return;
+            }
+            field.addEventListener('invalid', function () {
+                if (extended && extended.contains(field)) { extended.classList.add('show'); }
                 if (extendedToggle) {
                     extendedToggle.classList.remove('collapsed');
                     extendedToggle.setAttribute('aria-expanded', 'true');
                 }
             });
+        }
+        revealExtendedOnInvalid(cost);
+        revealExtendedOnInvalid(quantity);
+
+        if (cost) {
             cost.addEventListener('input', updateTotal);
         }
-
+        if (quantity) {
+            quantity.addEventListener('input', updateTotal);
+        }
         if (category) {
             category.addEventListener('change', function () {
+                applyCategoryLayout();
                 updateRateFromCategory();
                 updateTotal();
                 updateCategoryHints(true);
             });
         }
-        if (quantity) {
-            quantity.addEventListener('input', updateTotal);
-        }
 
+        applyCategoryLayout();
         updateTotal();
         updateCategoryHints(false);
     }
@@ -233,7 +283,7 @@
         });
     }).observe(document.body, { childList: true, subtree: true });
 
-    // Links with data-event="kimai.expenseUpdate" make Kimai fire this event
+    // Forms with data-form-event="kimai.expenseUpdate" make Kimai fire this event
     // after a successful save in its modal. Reload so the list shows the change.
     document.addEventListener('kimai.expenseUpdate', function () {
         window.location.reload();
